@@ -11,6 +11,21 @@ from .datagram import Datagram, register_datagram
 # ============================================================================
 
 @register_datagram
+class UnknownCommand5(Datagram):
+    """Commande 0x0005 détectée sur certaines bornes EVSE"""
+    COMMAND = 0x0005
+    
+    def __init__(self):
+        super().__init__()
+        self.raw_data = b''
+    
+    def pack_payload(self) -> bytes:
+        return self.raw_data
+    
+    def unpack_payload(self, buffer: bytes) -> None:
+        self.raw_data = buffer
+
+@register_datagram
 class UnknownCommand13(Datagram):
     """Commande 0x000d détectée sur certaines bornes EVSE"""
     COMMAND = 0x000d
