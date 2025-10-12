@@ -296,15 +296,20 @@ class EVSE:
             set_current = SetAndGetOutputElectricity()
             set_current.set_device_serial(self.info.serial)
             set_current.set_device_password(self.password)
-            set_current.max_electricity = amps
+            set_current.action = 1  # SET action
+            set_current.electricity = amps  # Correct attribute name
             
             await self.send_datagram(set_current)
+            
+            # Attendre la réponse
+            await asyncio.sleep(1)
+            
             self.config.max_electricity = amps
             _LOGGER.info(f"Courant maximum défini à {amps}A")
             return True
             
         except Exception as e:
-            _LOGGER.error(f"Erreur lors de la configuration: {e}")
+            _LOGGER.error(f"Erreur lors de la configuration du courant: {e}")
             return False
     
     async def set_name(self, name: str) -> bool:
