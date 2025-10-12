@@ -4,6 +4,7 @@ Support des bornes EVSE utilisant le protocole UDP EmProto (Morec et compatibles
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 
@@ -20,7 +21,7 @@ DOMAIN = "evsemasterudp"
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.NUMBER]
 
 # Intervalle de mise à jour (en secondes)
-UPDATE_INTERVAL = timedelta(seconds=30)
+UPDATE_INTERVAL = timedelta(seconds=60)
 
 class EVSEDataUpdateCoordinator(DataUpdateCoordinator):
     """Coordinateur pour mettre à jour les données EVSE"""
@@ -42,14 +43,16 @@ class EVSEDataUpdateCoordinator(DataUpdateCoordinator):
             evses = self.client.get_all_evses()
             
             if not evses:
-                _LOGGER.debug("Aucune EVSE trouvée")
+                _LOGGER.debug("Aucune EVSE trouvée lors de la mise à jour")
                 return {}
             
             _LOGGER.debug(f"Données EVSE mises à jour: {len(evses)} bornes trouvées")
             return evses
             
         except Exception as err:
-            raise UpdateFailed(f"Erreur lors de la mise à jour des données EVSE: {err}")
+            _LOGGER.warning(f"Erreur lors de la mise à jour des données EVSE: {err}")
+            # Retourner les données précédentes plutôt que de lever une exception
+            return self.data if hasattr(self, 'data') and self.data else {}
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configurer l'intégration EVSE à partir d'une entrée de configuration"""
@@ -73,15 +76,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return False
     
     # Attendre un peu pour découvrir les EVSEs
-    await hass.async_add_executor_job(lambda: hass.loop.call_later(3, lambda: None))
+    await asyncio.sleep(3)
     
     # Essayer de se connecter à l'EVSE configurée
     if serial and password:
-        success = await client.login(serial, password)
-        if success:
-            _LOGGER.info(f"Connexion réussie à l'EVSE {serial}")
+        # Essayer plusieurs fois le login car l'EVSE peut ne pas être immédiatement disponible
+        for attempt in range(3):
+            success = await client.login(serial, password)
+            if success:
+                _LOGGER.info(f"Connexion réussie à l'EVSE {serial}")
+                break
+            else:
+                _LOGGER.warning(f"Tentative de connexion {attempt + 1}/3 à l'EVSE {serial} échouée")
+                if attempt < 2:  # Attendre avant le prochain essai
+                    await asyncio.sleep(2)
         else:
-            _LOGGER.warning(f"Impossible de se connecter à l'EVSE {serial}")
+            _LOGGER.warning(f"Impossible de se connecter à l'EVSE {serial} après 3 tentatives")
     
     # Créer le coordinateur de données
     coordinator = EVSEDataUpdateCoordinator(hass, client)
