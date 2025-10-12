@@ -7,6 +7,42 @@ from datetime import datetime
 from .datagram import Datagram, register_datagram
 
 # ============================================================================
+# NOUVELLES COMMANDES DÉTECTÉES
+# ============================================================================
+
+@register_datagram
+class UnknownCommand13(Datagram):
+    """Commande 0x000d détectée sur certaines bornes EVSE"""
+    COMMAND = 0x000d
+    
+    def __init__(self):
+        super().__init__()
+        self.raw_data = b''
+    
+    def pack_payload(self) -> bytes:
+        return self.raw_data
+    
+    def unpack_payload(self, buffer: bytes) -> None:
+        self.raw_data = buffer
+        # Pour debug - on stocke les données brutes pour analyse
+
+@register_datagram
+class UnknownCommand341(Datagram):
+    """Commande 0x0155 (341) détectée sur certaines bornes EVSE"""
+    COMMAND = 0x0155
+    
+    def __init__(self):
+        super().__init__()
+        self.raw_data = b''
+    
+    def pack_payload(self) -> bytes:
+        return self.raw_data
+    
+    def unpack_payload(self, buffer: bytes) -> None:
+        self.raw_data = buffer
+        # Pour debug - on stocke les données brutes pour analyse
+
+# ============================================================================
 # HEADING - Keepalive
 # ============================================================================
 
@@ -175,31 +211,40 @@ class SingleACStatus(Datagram):
         return b''
     
     def unpack_payload(self, buffer: bytes) -> None:
-        if len(buffer) < 48:
-            raise ValueError("Buffer trop court pour SingleACStatus")
+        # Gestion flexible pour différentes versions de firmware
+        min_size = 28  # Taille minimale requise
+        if len(buffer) < min_size:
+            raise ValueError(f"Buffer trop court pour SingleACStatus: {len(buffer)} < {min_size}")
         
-        self.current_power = struct.unpack('>I', buffer[0:4])[0] / 1000.0
-        self.current_amount = struct.unpack('>I', buffer[4:8])[0] / 1000.0
-        self.l1_voltage = struct.unpack('>H', buffer[8:10])[0] / 10.0
-        self.l1_electricity = struct.unpack('>H', buffer[10:12])[0] / 100.0
-        self.l2_voltage = struct.unpack('>H', buffer[12:14])[0] / 10.0
-        self.l2_electricity = struct.unpack('>H', buffer[14:16])[0] / 100.0
-        self.l3_voltage = struct.unpack('>H', buffer[16:18])[0] / 10.0
-        self.l3_electricity = struct.unpack('>H', buffer[18:20])[0] / 100.0
+        # Lecture sécurisée avec vérification de taille
+        if len(buffer) >= 8:
+            self.current_power = struct.unpack('>I', buffer[0:4])[0] / 1000.0
+            self.current_amount = struct.unpack('>I', buffer[4:8])[0] / 1000.0
         
-        self.inner_temp = self.read_temperature(buffer, 20)
-        self.outer_temp = self.read_temperature(buffer, 22)
+        if len(buffer) >= 20:
+            self.l1_voltage = struct.unpack('>H', buffer[8:10])[0] / 10.0
+            self.l1_electricity = struct.unpack('>H', buffer[10:12])[0] / 100.0
+            self.l2_voltage = struct.unpack('>H', buffer[12:14])[0] / 10.0
+            self.l2_electricity = struct.unpack('>H', buffer[14:16])[0] / 100.0
+            self.l3_voltage = struct.unpack('>H', buffer[16:18])[0] / 10.0
+            self.l3_electricity = struct.unpack('>H', buffer[18:20])[0] / 100.0
         
-        self.current_state = buffer[24]
-        self.gun_state = buffer[25]
-        self.output_state = buffer[26]
+        if len(buffer) >= 24:
+            self.inner_temp = self.read_temperature(buffer, 20)
+            self.outer_temp = self.read_temperature(buffer, 22)
+        
+        if len(buffer) >= 27:
+            self.current_state = buffer[24]
+            self.gun_state = buffer[25]
+            self.output_state = buffer[26]
         
         # Erreurs (tableau variable)
-        error_count = buffer[27] if len(buffer) > 27 else 0
-        self.errors = []
-        for i in range(error_count):
-            if len(buffer) > 28 + i:
-                self.errors.append(buffer[28 + i])
+        if len(buffer) > 27:
+            error_count = buffer[27]
+            self.errors = []
+            for i in range(error_count):
+                if len(buffer) > 28 + i:
+                    self.errors.append(buffer[28 + i])
 
 @register_datagram
 class SingleACStatusResponse(Datagram):
