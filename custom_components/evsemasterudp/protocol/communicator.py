@@ -465,7 +465,7 @@ class Communicator:
         evse._last_response = datagram  # Stocker pour _wait_for_response
         
         # Traiter le datagramme spécifique
-        if isinstance(datagram, RequestLogin):
+        if isinstance(datagram, Login):
             await self._handle_login(evse, datagram)
         elif isinstance(datagram, LoginResponse):
             await self._handle_login_response(evse, datagram)
@@ -494,8 +494,8 @@ class Communicator:
         # Cette réponse indique que le mot de passe était correct
         # Le vrai login sera complété par LoginConfirm dans la méthode login()
     
-    async def _handle_login(self, evse: EVSE, datagram: RequestLogin):
-        """Traiter une réponse de login"""
+    async def _handle_login(self, evse: EVSE, datagram: Login):
+        """Traiter un broadcast de découverte EVSE"""
         evse.info.brand = datagram.brand
         evse.info.model = datagram.model
         evse.info.hardware_version = datagram.hardware_version
@@ -595,19 +595,20 @@ class Communicator:
         if not evse.current_charge:
             evse.current_charge = EVSECurrentCharge()
         
-        evse.current_charge.port = datagram.port
-        evse.current_charge.current_state = datagram.current_state
+        # Mapper les attributs du protocole vers la structure interne
+        evse.current_charge.port = datagram.line_id  # line_id → port
+        # current_state n'existe pas dans CurrentChargeRecord, garder valeur existante
         evse.current_charge.charge_id = datagram.charge_id
         evse.current_charge.start_type = datagram.start_type
         evse.current_charge.charge_type = datagram.charge_type
-        evse.current_charge.reservation_date = datagram.reservation_date
-        evse.current_charge.user_id = datagram.user_id
-        evse.current_charge.max_electricity = datagram.max_electricity
+        evse.current_charge.reservation_date = datagram.reservation_data  # reservation_data → reservation_date
+        evse.current_charge.user_id = datagram.start_user_id  # start_user_id → user_id
+        # max_electricity n'existe pas dans CurrentChargeRecord, garder valeur existante
         evse.current_charge.start_date = datagram.start_date
-        evse.current_charge.duration_seconds = datagram.duration_seconds
-        evse.current_charge.start_kwh_counter = datagram.start_kwh_counter
-        evse.current_charge.current_kwh_counter = datagram.current_kwh_counter
-        evse.current_charge.charge_kwh = datagram.charge_kwh
+        evse.current_charge.duration_seconds = datagram.charged_time  # charged_time → duration_seconds
+        evse.current_charge.start_kwh_counter = datagram.charge_start_power  # charge_start_power → start_kwh_counter
+        evse.current_charge.current_kwh_counter = datagram.charge_stop_power  # charge_stop_power → current_kwh_counter
+        evse.current_charge.charge_kwh = datagram.charge_power  # charge_power → charge_kwh
         evse.current_charge.charge_price = datagram.charge_price
         evse.current_charge.fee_type = datagram.fee_type
         evse.current_charge.charge_fee = datagram.charge_fee

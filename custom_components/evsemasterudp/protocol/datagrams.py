@@ -44,6 +44,11 @@ class Login(Datagram):
         self.max_electricity: int = 0
         self.hot_line: str = ""
         self.p51: int = 0
+        # Attributs dérivés non présents dans le protocole mais attendus par les handlers
+        self.phases: int = 1  # Défaut: monophasé
+        self.can_force_single_phase: bool = False  # Défaut: pas de forçage
+        self.feature: str = ""  # Fonctionnalités supportées
+        self.support_new: bool = False  # Support nouvelles fonctions
     
     def pack_payload(self) -> bytes:
         return b''  # App n'envoie pas ce message
@@ -414,11 +419,87 @@ class CurrentChargeRecord(Datagram):
     """0x0009 - Enregistrement charge actuel (EVSE → App)"""
     COMMAND = 9
     
+    def __init__(self):
+        super().__init__()
+        self.line_id: int = 1
+        self.start_user_id: str = ""
+        self.end_user_id: str = ""
+        self.charge_id: str = ""
+        self.has_reservation: int = 0
+        self.start_type: int = 0
+        self.charge_type: int = 0
+        self.charge_param1: int = 0
+        self.charge_param2: float = 0.0
+        self.charge_param3: float = 0.0
+        self.stop_reason: int = 0
+        self.has_stop_charge: int = 0
+        self.reservation_data: int = 0
+        self.start_date: int = 0
+        self.stop_date: int = 0
+        self.charged_time: int = 0
+        self.charge_start_power: float = 0.0
+        self.charge_stop_power: float = 0.0
+        self.charge_power: float = 0.0
+        self.charge_price: float = 0.0
+        self.fee_type: int = 0
+        self.charge_fee: float = 0.0
+        self.log_kw_length: int = 0
+        self.log_kw: List[int] = []
+        self.log_charge_data_kwh: List[int] = []
+        self.log_charge_data_charge_fee: List[int] = []
+        self.log_charge_data_service_fee: List[int] = []
+    
     def pack_payload(self) -> bytes:
         return b''
     
     def unpack_payload(self, buffer: bytes) -> None:
-        pass
+        if len(buffer) < 97:
+            return
+            
+        self.line_id = buffer[0]
+        self.start_user_id = read_string(buffer, 1, 16)
+        self.end_user_id = read_string(buffer, 17, 16)
+        self.charge_id = read_string(buffer, 33, 16)
+        self.has_reservation = buffer[49]
+        self.start_type = buffer[50]
+        self.charge_type = buffer[51]
+        self.charge_param1 = struct.unpack('>H', buffer[52:54])[0]
+        self.charge_param2 = struct.unpack('>H', buffer[54:56])[0] * 0.001
+        self.charge_param3 = struct.unpack('>H', buffer[56:58])[0] * 0.01
+        self.stop_reason = buffer[58]
+        self.has_stop_charge = buffer[59]
+        self.reservation_data = struct.unpack('>I', buffer[60:64])[0]
+        self.start_date = struct.unpack('>I', buffer[64:68])[0]
+        self.stop_date = struct.unpack('>I', buffer[68:72])[0]
+        self.charged_time = struct.unpack('>I', buffer[72:76])[0]
+        self.charge_start_power = struct.unpack('>I', buffer[76:80])[0] * 0.01
+        self.charge_stop_power = struct.unpack('>I', buffer[80:84])[0] * 0.01
+        self.charge_power = struct.unpack('>I', buffer[84:88])[0] * 0.01
+        self.charge_price = struct.unpack('>I', buffer[88:92])[0] * 0.01
+        self.fee_type = buffer[92]
+        self.charge_fee = struct.unpack('>H', buffer[93:95])[0] * 0.01
+        self.log_kw_length = struct.unpack('>H', buffer[95:97])[0]
+        
+        # Logs optionnels selon la longueur
+        if len(buffer) >= 156:
+            self.log_kw = []
+            for i in range(60):
+                self.log_kw.append(struct.unpack('>H', buffer[96 + i*2:98 + i*2])[0])
+                
+        if len(buffer) >= 252:
+            self.log_charge_data_kwh = []
+            for i in range(0, 96, 2):
+                self.log_charge_data_kwh.append(struct.unpack('>H', buffer[156 + i:158 + i])[0])
+                
+        if len(buffer) >= 348:
+            self.log_charge_data_charge_fee = []
+            for i in range(0, 96, 2):
+                self.log_charge_data_charge_fee.append(struct.unpack('>H', buffer[252 + i:254 + i])[0])
+                
+        if len(buffer) >= 446:
+            self.log_charge_data_service_fee = []
+            for i in range(0, 96, 2):
+                self.log_charge_data_service_fee.append(struct.unpack('>H', buffer[348 + i:350 + i])[0])
 
 @register_datagram
 class RequestChargeStatusRecord(Datagram):
