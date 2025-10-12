@@ -1,0 +1,12 @@
+{
+  "domain": "evsemasterudp",
+  "name": "EVSE Master UDP",
+  "codeowners": ["@yourusername"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/johnwoo-nl/emproto",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "requirements": [],
+  "version": "1.0.0"
+}

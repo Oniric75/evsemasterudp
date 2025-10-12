@@ -1,0 +1,52 @@
+/.idea
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Node.js
+node_modules/
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Home Assistant specific
+home-assistant.log
+home-assistant_v2.db
+.storage/
+.cloud/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node modules (legacy)
+node_modules/
+package-lock.json
+
+# Tests
+tests/output/
+tests/logs/
+
+# Home Assistant
+home-assistant.log
+*.db
+dist/
