@@ -1,379 +1,178 @@
-# EVSE Master UDP - Home Assistant Integration# EVSE Master UDP - Home Assistant Integration
-
-
-
-> **🙏 ACKNOWLEDGMENT / REMERCIEMENTS**  > **🙏 ACKNOWLEDGMENT / REMERCIEMENTS**  
-
-> This project is based on the excellent work of [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto). Without their invaluable reverse-engineering of the EVSE Master UDP protocol, this Home Assistant integration would not have been possible. Full credit and thanks to the original author! 🌟  > This project is based on the excellent work of [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto). Without their invaluable reverse-engineering of the EVSE Master UDP protocol, this Home Assistant integration would not have been possible. Full credit and thanks to the original author! 🌟  
-
-> > 
-
-> Ce projet est basé sur l'excellent travail de [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto). Sans leur précieux reverse-engineering du protocole UDP EVSE Master, cette intégration Home Assistant n'aurait pas été possible. Tout le crédit et nos remerciements à l'auteur original ! 🌟> Ce projet est basé sur l'excellent travail de [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto). Sans leur précieux reverse-engineering du protocole UDP EVSE Master, cette intégration Home Assistant n'aurait pas été possible. Tout le crédit et nos remerciements à l'auteur original ! 🌟
-
-
-
-------
-
-
-
-🔌 **Home Assistant Integration for EVSE Master UDP compatible charging stations**🔌 **Home Assistant Integration for EVSE Master UDP compatible charging stations**
-
-
-
-Cette intégration permet de contrôler et surveiller votre borne de recharge EVSE depuis Home Assistant via le protocole UDP utilisé par l'application mobile "EVSE Master".Cette intégration permet de contrôler et surveiller votre borne de recharge EVSE depuis Home Assistant via le protocole UDP utilisé par l'application mobile "EVSE Master".
-
-
-
-## 🚀 Installation Rapide## 🚀 Installation Rapide
-
-
-
-1. **Copier les fichiers** :1. **Copier les fichiers** :
-
-   ```bash   ```bash
-
-   cp -r custom_components/evsemasterudp /config/custom_components/   cp -r custom_components/evsemasterudp /config/custom_components/
-
-   ```   ```
-
-
-
-2. **Redémarrer Home Assistant**2. **Redémarrer Home Assistant**
-
-
-
-3. **Ajouter l'intégration** :3. **Ajouter l'intégration** :
-
-   - Configuration → Intégrations → Ajouter   - Configuration → Intégrations → Ajouter
-
-   - Rechercher : "EVSE Master UDP"   - Rechercher : "EVSE Master UDP"
-
-
-
-4. **Configurer** :4. **Configurer** :
-
-   - Numéro de série : trouvé sur votre borne   - Numéro de série : trouvé sur votre borne
-
-   - Mot de passe : défini dans l'app EVSE Master   - Mot de passe : défini dans l'app EVSE Master
-
-   - Port : 28376 (défaut)   - Port : 28376 (défaut)
-
-
-
-## 🏗️ Compatibilité## 🏗️ Compatibilité
-
-
-
-**Bornes testées et compatibles** :**Bornes testées et compatibles** :
-
-- **Morec** (toutes les bornes utilisant l'app "EVSE Master")- **Morec** (toutes les bornes utilisant l'app "EVSE Master")
-
-- **Bornes EVSE génériques** utilisant le protocole UDP sur le port 28376- **Bornes EVSE génériques** utilisant le protocole UDP sur le port 28376
-
-- **Bornes chinoises** configurables via l'app EVSE Master- **Bornes chinoises** configurables via l'app EVSE Master
-
-
-
-## 📊 Entités Créées## 🚀 Installation
-
-
-
-### Capteurs (Sensors)### Method 1: HACS (Recommended)
-
-- `sensor.evse_status` - Statut général de la borne
-
-- `sensor.evse_power` - Puissance actuelle (W)1. Open HACS in Home Assistant
-
-- `sensor.evse_current` - Courant (A)2. Go to "Integrations"
-
-- `sensor.evse_voltage` - Tension (V)3. Click the 3 dots in the top right → "Custom repositories"
-
-- `sensor.evse_temperature` - Température de la borne (°C)4. Add `https://github.com/Oniric75/evsemasterudp` as a repository of type "Integration"
-
-- `sensor.evse_session_energy` - Énergie de la session (kWh)5. Search for "EVSE Master UDP" in HACS
-
-- `sensor.evse_total_energy` - Énergie totale (kWh)6. Install the integration
-
-7. Restart Home Assistant
-
-### Commutateurs (Switches)
-
-- `switch.evse_charging` - Contrôle marche/arrêt de la charge### Method 2: Manual Installation
-
-- `switch.evse_offline_charge` - Mode charge hors ligne
-
-1. Download the [latest release](https://github.com/Oniric75/evsemasterudp/releases)
-
-### Contrôles Numériques (Number)2. Extract the `evsemasterudp` folder to `custom_components/`
-
-- `number.evse_max_current` - Courant maximum (A)3. Restart Home Assistant
-
-- `number.evse_charge_fee` - Tarif de charge
-
-- `number.evse_service_fee` - Frais de service## ⚙️ Configuration
-
-
-
-## 🛠️ Fonctionnalités1. Go to **Configuration** → **Integrations**
-
-2. Click **"Add Integration"**
-
-- 🔍 **Découverte automatique** des bornes EVSE sur le réseau local3. Search for **"EVSE Master UDP"**
-
-- 🔐 **Authentification sécurisée** avec mot de passe4. Follow the configuration wizard:
-
-- 📊 **Surveillance en temps réel** du statut de charge   - Automatic discovery will detect your charging station
-
-- ⚡ **Contrôle de la charge** (démarrage/arrêt)   - Enter your EVSE station password
-
-- 🔢 **Configuration des paramètres** (courant max, température, etc.)   - Configure update frequency (recommended: 30 seconds)
-
-- 📈 **Historique des sessions de charge**
-
-- 🛡️ **Protections intégrées** contre l'usure prématurée## 📊 Created Entities
-
-
-
-## ⚠️ Avertissements Importants### Sensors
-
-- `sensor.evse_status` - General station status
-
-> **PROTECTION DE L'ÉQUIPEMENT** : Les démarrages répétés de charge peuvent user prématurément les contacteurs de votre borne. Cette intégration inclut des protections automatiques, mais **l'utilisation se fait à vos risques et périls**.- `sensor.evse_power` - Current power (W)
-
-- `sensor.evse_current` - Current amperage (A)
-
-**Protections intégrées** :- `sensor.evse_voltage` - Voltage (V)
-
-- 🛡️ **Protection contre les changements rapides** : Empêche les démarrages/arrêts trop fréquents (délai minimum de 5 min)- `sensor.evse_temperature` - Station temperature (°C)
-
-- 🔒 **Sécurité de repli à 16A** : En cas d'erreur, limite automatiquement à 16A- `sensor.evse_session_energy` - Current session energy (kWh)
-
-- ⏱️ **Délai minimum entre les cycles** : Respecte un temps minimum entre les opérations- `sensor.evse_total_energy` - Total energy (kWh)
-
-
-
-**Recommandations** :### Switches
-
-- Évitez les démarrages/arrêts fréquents (< 5 minutes d'intervalle)- `switch.evse_charging` - Charging on/off control
-
-- Planifiez vos automatisations pour éviter les cycles rapides- `switch.evse_offline_charge` - Offline charging mode
-
-- Surveillez l'état de santé de votre équipement
-
-### Number Controls
-
-## 🔧 Configuration Avancée- `number.evse_max_current` - Maximum current (A)
-
-- `number.evse_charge_fee` - Charging rate
-
-### Paramètres disponibles dans l'interface :- `number.evse_service_fee` - Service fee
-
-- **Fréquence de mise à jour** : 15-300 secondes (défaut : 30s)
-
-- **Mode de connexion** : Automatique ou manuel## 🛠️ Features
-
-- **Gestion des erreurs** : Automatique ou manuelle
-
-- 🔍 **Automatic discovery** of EVSE stations on local network
-
-## 🐛 Résolution de Problèmes- 🔐 **Secure authentication** with password
-
-- 📊 **Real-time monitoring** of charging status
-
-### Borne non détectée- ⚡ **Charging control** (start/stop)
-
-1. Vérifiez que la borne est allumée- 🔢 **Parameter configuration** (max current, temperature, etc.)
-
-2. Confirmez que Home Assistant et la borne sont sur le même réseau- 📈 **Charging session history**
-
-3. Vérifiez que le port 28376 n'est pas bloqué par le pare-feu- 🛡️ **Built-in protections** against premature wear
-
-
-
-### Authentification échouée## 🔧 Advanced Configuration
-
-1. Vérifiez le mot de passe dans l'app EVSE Master
-
-2. Confirmez le numéro de série de la borne### Available settings in the interface:
-
-3. Redémarrez la borne si nécessaire- **Update frequency**: 15-300 seconds (default: 30s)
-
-- **Connection timeout**: 5-30 seconds (default: 10s)
-
-### Données non mises à jour- **Rapid change protection**: enabled by default
-
-1. Vérifiez la connexion réseau- **Minimum delay between cycles**: 5 minutes (configurable)
-
-2. Ajustez la fréquence de mise à jour
-
-3. Consultez les logs de Home Assistant## 📚 Automation Examples
-
-
-
-## 📝 Licence### Charging start based on electricity rates
-
-
-
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.```yaml
-
-automation:
-
-## 🤝 Contribution  - alias: "EVSE charge during off-peak hours"
-
-    trigger:
-
-Les contributions sont les bienvenues ! N'hésitez pas à :      - platform: time
-
-1. Fork le projet        at: "22:30:00"  # Off-peak hours start
-
-2. Créer une branche pour votre fonctionnalité    condition:
-
-3. Commiter vos changements      - condition: state
-
-4. Ouvrir une Pull Request        entity_id: binary_sensor.vehicle_connected
-
-        state: "on"
-
-## 📞 Support    action:
-
-      - service: switch.turn_on
-
-- **Issues** : [GitHub Issues](https://github.com/Oniric75/evsemasterudp/issues)        entity_id: switch.evse_charging
-
-- **Discussions** : [GitHub Discussions](https://github.com/Oniric75/evsemasterudp/discussions)```
-
-- **Documentation** : Ce README et les commentaires dans le code
-
-### Automatic stop at 80% battery
+# EVSE Master UDP - Home Assistant Integration
+
+> **🙏 ACKNOWLEDGMENT / REMERCIEMENTS**
+> 
+> This project is based on the excellent work of [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto). Without their invaluable reverse-engineering of the EVSE Master UDP protocol, this Home Assistant integration would not have been possible. Full credit and thanks to the original author! 🌟
+> 
+> Ce projet est basé sur l'excellent travail de [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto). Sans leur précieux reverse-engineering du protocole UDP EVSE Master, cette intégration Home Assistant n'aurait pas été possible. Tout le crédit et nos remerciements à l'auteur original ! 🌟
 
 ---
 
+> **🌐 This README is available in two languages / Ce README est disponible en deux langues :**
+> - [🇺🇸 **English Version**](#-english-version) (below / ci-dessous)
+> - [🇫🇷 **Version Française**](#-version-française) (scroll down / plus bas)
+
+---
+
+## 📋 Table of Contents / Table des Matières
+- [🇺🇸 English Version](#-english-version)
+- [🇫🇷 Version Française](#-version-française)
+
+---
+
+# 🇺🇸 English Version
+
+🔌 **Home Assistant Integration for EVSE Master UDP compatible charging stations**
+
+This integration allows you to control and monitor your EVSE charging station from Home Assistant via the UDP protocol used by the "EVSE Master" mobile application.
+
+## ⚠️ Important Warnings
+
+> **EQUIPMENT PROTECTION**: Repeated charge starts can prematurely wear out your charging station's contactors. This integration includes automatic protections, but **use is at your own risk**.
+
+**Built-in protections**:
+- 🛡️ **Rapid change protection**: Prevents too frequent starts/stops (5 min minimum delay)
+- 🔒 **16A safety fallback**: In case of error, automatically limits to 16A
+- ⏱️ **Minimum delay between cycles**: Respects minimum time between operations
+
+**Recommendations**:
+- Avoid frequent starts/stops (< 5 minutes interval)
+- Plan your automations to avoid rapid cycles
+- Monitor your equipment's health status
+
+## 🏗️ Compatibility
+
+**Tested and compatible charging stations**:
+- **Morec** (all stations using the "EVSE Master" app)
+- **Generic EVSE stations** using UDP protocol on port 28376
+- **Chinese stations** configurable via EVSE Master app
+
+## 🚀 Installation
+
+### Method 1: HACS (Recommended)
+
+1. Open HACS in Home Assistant
+2. Go to "Integrations"
+3. Click the 3 dots in the top right → "Custom repositories"
+4. Add `https://github.com/Oniric75/evsemasterudp` as a repository of type "Integration"
+5. Search for "EVSE Master UDP" in HACS
+6. Install the integration
+7. Restart Home Assistant
+
+### Method 2: Manual Installation
+
+1. Download the [latest release](https://github.com/Oniric75/evsemasterudp/releases)
+2. Extract the `evsemasterudp` folder to `custom_components/`
+3. Restart Home Assistant
+
+## ⚙️ Configuration
+
+1. Go to **Configuration** → **Integrations**
+2. Click **"Add Integration"**
+3. Search for **"EVSE Master UDP"**
+4. Follow the configuration wizard:
+   - Automatic discovery will detect your charging station
+   - Enter your EVSE station serial number (found on device label)
+   - Enter your EVSE station password (set in EVSE Master app)
+   - Configure update frequency (recommended: 30 seconds)
+
+## 📊 Created Entities
+
+### Sensors
+- `sensor.evse_status` - General station status
+- `sensor.evse_power` - Current power (W)
+- `sensor.evse_current` - Current amperage (A)
+- `sensor.evse_voltage` - Voltage (V)
+- `sensor.evse_temperature` - Station temperature (°C)
+- `sensor.evse_session_energy` - Current session energy (kWh)
+- `sensor.evse_total_energy` - Total energy (kWh)
+
+### Switches
+- `switch.evse_charging` - Charging on/off control
+- `switch.evse_offline_charge` - Offline charging mode
+
+### Number Controls
+- `number.evse_max_current` - Maximum current (A)
+- `number.evse_charge_fee` - Charging rate
+- `number.evse_service_fee` - Service fee
+
+## 🛠️ Features
+
+- 🔍 **Automatic discovery** of EVSE stations on local network
+- 🔐 **Secure authentication** with password
+- 📊 **Real-time monitoring** of charging status
+- ⚡ **Charging control** (start/stop)
+- 🔢 **Parameter configuration** (max current, temperature, etc.)
+- 📈 **Charging session history**
+- 🛡️ **Built-in protections** against premature wear
+
+## 🔧 Advanced Configuration
+
+### Available settings in the interface:
+- **Update frequency**: 15-300 seconds (default: 30s)
+- **Connection timeout**: 5-30 seconds (default: 10s)
+- **Rapid change protection**: enabled by default
+- **Minimum delay between cycles**: 5 minutes (configurable)
+
+## 📚 Automation Examples
+
+### Charging start based on electricity rates
+
 ```yaml
+automation:
+  - alias: "EVSE charge during off-peak hours"
+    trigger:
+      - platform: time
+        at: "22:30:00"  # Off-peak hours start
+    condition:
+      - condition: state
+        entity_id: binary_sensor.vehicle_connected
+        state: "on"
+    action:
+      - service: switch.turn_on
+        entity_id: switch.evse_charging
+```
 
-## 🛠️ Développementautomation:
+### Automatic stop at 80% battery
 
+```yaml
+automation:
   - alias: "Stop charge at 80%"
-
-### Structure du Projet    trigger:
-
-```      - platform: numeric_state
-
-custom_components/evsemasterudp/        entity_id: sensor.vehicle_battery_level
-
-├── __init__.py              # Point d'entrée de l'intégration        above: 80
-
-├── manifest.json            # Métadonnées de l'intégration    action:
-
-├── config_flow.py           # Interface de configuration      - service: switch.turn_off
-
-├── evse_client.py           # Client principal EVSE        entity_id: switch.evse_charging
-
-├── sensor.py                # Capteurs Home Assistant```
-
-├── switch.py                # Commutateurs Home Assistant
-
-├── number.py                # Contrôles numériques Home Assistant## 🆘 Support and Issues
-
-└── protocol/                # Implémentation du protocole UDP
-
-    ├── __init__.py- 📋 [Report a bug](https://github.com/Oniric75/evsemasterudp/issues)
-
-    ├── communicator.py      # Communicateur UDP- 💬 [Discussions](https://github.com/Oniric75/evsemasterudp/discussions)
-
-    ├── datagram.py          # Classes de base des datagrammes- 📖 [Wiki and documentation](https://github.com/Oniric75/evsemasterudp/wiki)
-
-    └── datagrams.py         # Implémentation des datagrammes EVSE
-
-```## 📄 License
-
-
-
-### TestsThis project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-```bash
-
-# Tests de base---
-
-python tests/test_basic.py
-
-## 👨‍💻 Development
-
-# Test de découverte
-
-python tests/test_discovery.py<details>
-
-<summary>Developer Information</summary>
-
-# Test complet
-
-python tests/test_full.py### Project Structure
-
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.vehicle_battery_level
+        above: 80
+    action:
+      - service: switch.turn_off
+        entity_id: switch.evse_charging
 ```
 
-```
+## 🐛 Troubleshooting
 
----evsemasterudp/
+### Station not detected
+1. Verify that the station is powered on
+2. Confirm that Home Assistant and the station are on the same network
+3. Check that port 28376 is not blocked by firewall
 
-├── __init__.py          # Integration entry point
+### Authentication failed
+1. Verify the password in the EVSE Master app
+2. Confirm the station serial number
+3. Restart the station if necessary
 
-*Made with ❤️ for the Home Assistant community*├── manifest.json        # Integration metadata
-├── config_flow.py       # Configuration interface
-├── evse_client.py       # Main EVSE client
-├── sensor.py           # Sensors
-├── switch.py           # Switches
-├── number.py           # Number controls
-├── protocol/           # Protocol implementation
-│   ├── __init__.py
-│   ├── communicator.py # UDP communication
-│   ├── datagram.py    # Datagram structure
-│   └── datagrams.py   # Message types
-└── tests/             # Unit tests
-    ├── test_basic.py
-    ├── test_discovery.py
-    └── test_full.py
-```
+### Connection lost
+1. Check network stability
+2. Increase update frequency in configuration
+3. Verify there are no network conflicts
 
-### EVSE Master UDP Protocol
+## 🆘 Support and Issues
 
-- **Default port**: 28376
-- **Communication**: Bidirectional UDP
-- **Authentication**: Plain text password
-- **Discovery**: Automatic broadcast
+- 📋 [Report a bug](https://github.com/Oniric75/evsemasterudp/issues)
+- 💬 [Discussions](https://github.com/Oniric75/evsemasterudp/discussions)
+- 📖 [Wiki and documentation](https://github.com/Oniric75/evsemasterudp/wiki)
 
-### Development Testing
+## 📄 License
 
-```bash
-# Activate virtual environment
-.venv/Scripts/activate  # Windows
-source .venv/bin/activate  # Linux/Mac
-
-# Basic tests
-python tests/test_basic.py
-
-# Discovery test
-python tests/test_discovery.py
-
-# Full test with real station
-python tests/test_full.py
-```
-
-### Development Requirements
-
-- Python 3.11+
-- Home Assistant Core 2024.1+
-- A compatible EVSE station on the local network
-
-### Contributing
-
-Contributions are welcome! To contribute:
-
-1. Fork the project
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-</details>
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
@@ -429,7 +228,8 @@ Cette intégration permet de contrôler et surveiller votre borne de recharge EV
 3. Recherchez **"EVSE Master UDP"**
 4. Suivez l'assistant de configuration :
    - La découverte automatique détectera votre borne
-   - Entrez le mot de passe de votre borne EVSE
+   - Entrez le numéro de série de votre borne (trouvé sur l'étiquette de l'appareil)
+   - Entrez le mot de passe de votre borne (défini dans l'app EVSE Master)
    - Configurez la fréquence de mise à jour (recommandé : 30 secondes)
 
 ## 📊 Entités Créées
@@ -503,168 +303,22 @@ automation:
         entity_id: switch.evse_charging
 ```
 
-## 🆘 Support et Problèmes
+## 🐛 Résolution de Problèmes
 
-- 📋 [Signaler un bug](https://github.com/Oniric75/evsemasterudp/issues)
-- 💬 [Discussions](https://github.com/Oniric75/evsemasterudp/discussions)
-- 📖 [Wiki et documentation](https://github.com/Oniric75/evsemasterudp/wiki)
+### Borne non détectée
+1. Vérifiez que la borne est allumée
+2. Confirmez que Home Assistant et la borne sont sur le même réseau
+3. Vérifiez que le port 28376 n'est pas bloqué par le pare-feu
 
-## 📄 Licence
+### Authentification échouée
+1. Vérifiez le mot de passe dans l'app EVSE Master
+2. Confirmez le numéro de série de la borne
+3. Redémarrez la borne si nécessaire
 
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
----
-
-## 👨‍💻 Développement
-
-<details>
-<summary>Informations pour les développeurs</summary>
-
-### Structure du Projet
-
-```
-evsemasterudp/
-├── __init__.py          # Point d'entrée de l'intégration
-├── manifest.json        # Métadonnées de l'intégration
-├── config_flow.py       # Interface de configuration
-├── evse_client.py       # Client principal EVSE
-├── sensor.py           # Capteurs
-├── switch.py           # Interrupteurs
-├── number.py           # Contrôles numériques
-├── protocol/           # Implémentation du protocole
-│   ├── __init__.py
-│   ├── communicator.py # Communication UDP
-│   ├── datagram.py    # Structure des datagrammes
-│   └── datagrams.py   # Types de messages
-└── tests/             # Tests unitaires
-    ├── test_basic.py
-    ├── test_discovery.py
-    └── test_full.py
-```
-
-### Protocole UDP EVSE Master
-
-- **Port par défaut** : 28376
-- **Communication** : Bidirectionnelle UDP
-- **Authentification** : Mot de passe en clair
-- **Découverte** : Broadcast automatique
-
-### Tests de Développement
-
-```bash
-# Activer l'environnement virtuel
-.venv/Scripts/activate  # Windows
-source .venv/bin/activate  # Linux/Mac
-
-# Tests basiques
-python tests/test_basic.py
-
-# Test de découverte
-python tests/test_discovery.py
-
-# Test complet avec vraie borne
-python tests/test_full.py
-```
-
-### Prérequis pour le Développement
-
-- Python 3.11+
-- Home Assistant Core 2024.1+
-- Une borne EVSE compatible sur le réseau local
-
-### Contributions
-
-Les contributions sont les bienvenues ! Pour contribuer :
-
-1. Fork le projet
-2. Créez une branche feature (`git checkout -b feature/amazing-feature`)
-3. Committez vos changements (`git commit -m 'Add amazing feature'`)
-4. Pushez vers la branche (`git push origin feature/amazing-feature`)
-5. Ouvrez une Pull Request
-
-</details>
-
----
-
-## 🙏 Remerciements
-
-Ce projet est basé sur le travail original de [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto) et a été porté et étendu pour Home Assistant.
-3. Recherchez **"EVSE Master UDP"**
-4. Suivez l'assistant de configuration :
-   - La découverte automatique détectera votre borne
-   - Entrez le mot de passe de votre borne EVSE
-   - Configurez la fréquence de mise à jour (recommandé : 30 secondes)
-
-## 📊 Entités Créées
-
-### Capteurs (Sensors)
-- `sensor.evse_status` - Statut général de la borne
-- `sensor.evse_power` - Puissance actuelle (W)
-- `sensor.evse_current` - Courant actuel (A)
-- `sensor.evse_voltage` - Tension (V)
-- `sensor.evse_temperature` - Température de la borne (°C)
-- `sensor.evse_session_energy` - Énergie de la session en cours (kWh)
-- `sensor.evse_total_energy` - Énergie totale (kWh)
-
-### Interrupteurs (Switches)
-- `switch.evse_charging` - Contrôle marche/arrêt de la charge
-- `switch.evse_offline_charge` - Mode charge hors ligne
-
-### Contrôles Numériques (Numbers)
-- `number.evse_max_current` - Courant maximum (A)
-- `number.evse_charge_fee` - Tarif de charge
-- `number.evse_service_fee` - Frais de service
-
-## 🛠️ Fonctionnalités
-
-- 🔍 **Découverte automatique** des bornes EVSE sur le réseau local
-- 🔐 **Authentification sécurisée** avec mot de passe
-- 📊 **Surveillance en temps réel** du statut de charge
-- ⚡ **Contrôle de la charge** (démarrage/arrêt)
-- 🔢 **Configuration des paramètres** (courant max, température, etc.)
-- 📈 **Historique des sessions** de charge
-- 🛡️ **Protections intégrées** contre l'usure prématurée
-
-## 🔧 Configuration Avancée
-
-### Paramètres disponibles dans l'interface :
-- **Fréquence de mise à jour** : 15-300 secondes (défaut: 30s)
-- **Timeout de connexion** : 5-30 secondes (défaut: 10s)
-- **Protection contre les changements rapides** : activée par défaut
-- **Délai minimum entre cycles** : 5 minutes (configurable)
-
-## 📚 Exemples d'Automatisations
-
-### Démarrage de charge basé sur les tarifs électriques
-
-```yaml
-automation:
-  - alias: "Charge EVSE heures creuses"
-    trigger:
-      - platform: time
-        at: "22:30:00"  # Début heures creuses
-    condition:
-      - condition: state
-        entity_id: binary_sensor.vehicle_connected
-        state: "on"
-    action:
-      - service: switch.turn_on
-        entity_id: switch.evse_charging
-```
-
-### Arrêt automatique à 80% de batterie
-
-```yaml
-automation:
-  - alias: "Arrêt charge 80%"
-    trigger:
-      - platform: numeric_state
-        entity_id: sensor.vehicle_battery_level
-        above: 80
-    action:
-      - service: switch.turn_off
-        entity_id: switch.evse_charging
-```
+### Perte de connexion
+1. Vérifiez la stabilité du réseau
+2. Augmentez la fréquence de mise à jour dans la configuration
+3. Vérifiez qu'il n'y a pas de conflits réseau
 
 ## 🆘 Support et Problèmes
 
@@ -678,79 +332,114 @@ Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de 
 
 ---
 
-## 👨‍💻 Développement
+## 👨‍💻 Development / Développement
 
 <details>
-<summary>Informations pour les développeurs</summary>
+<summary>🇺🇸 Developer Information / 🇫🇷 Informations pour les développeurs</summary>
 
-### Structure du Projet
+### Project Structure / Structure du Projet
 
 ```
 evsemasterudp/
-├── __init__.py          # Point d'entrée de l'intégration
-├── manifest.json        # Métadonnées de l'intégration
-├── config_flow.py       # Interface de configuration
-├── evse_client.py       # Client principal EVSE
-├── sensor.py           # Capteurs
-├── switch.py           # Interrupteurs
-├── number.py           # Contrôles numériques
-├── protocol/           # Implémentation du protocole
+├── __init__.py          # Integration entry point / Point d'entrée
+├── manifest.json        # Integration metadata / Métadonnées
+├── config_flow.py       # Configuration interface / Interface de config
+├── evse_client.py       # Main EVSE client / Client principal EVSE
+├── sensor.py           # Sensors / Capteurs
+├── switch.py           # Switches / Interrupteurs
+├── number.py           # Number controls / Contrôles numériques
+├── protocol/           # Protocol implementation / Implémentation protocole
 │   ├── __init__.py
-│   ├── communicator.py # Communication UDP
-│   ├── datagram.py    # Structure des datagrammes
-│   └── datagrams.py   # Types de messages
-└── tests/             # Tests unitaires
+│   ├── communicator.py # UDP communication / Communication UDP
+│   ├── datagram.py    # Datagram structure / Structure datagrammes
+│   └── datagrams.py   # Message types / Types de messages
+└── tests/             # Unit tests / Tests unitaires
     ├── test_basic.py
     ├── test_discovery.py
     └── test_full.py
 ```
 
-### Protocole UDP EVSE Master
+### EVSE Master UDP Protocol / Protocole UDP EVSE Master
 
-- **Port par défaut** : 28376
-- **Communication** : Bidirectionnelle UDP
-- **Authentification** : Mot de passe en clair
-- **Découverte** : Broadcast automatique
+- **Default port / Port par défaut** : 28376
+- **Communication** : Bidirectional UDP / UDP bidirectionnel
+- **Authentication / Authentification** : Plain text password / Mot de passe texte
+- **Discovery / Découverte** : Automatic broadcast / Broadcast automatique
 
-### Tests de Développement
+### Development Testing / Tests de Développement
 
 ```bash
-# Activer l'environnement virtuel
+# Activate virtual environment / Activer l'environnement virtuel
 .venv/Scripts/activate  # Windows
 source .venv/bin/activate  # Linux/Mac
 
-# Tests basiques
+# Basic tests / Tests basiques
 python tests/test_basic.py
 
-# Test de découverte
+# Discovery test / Test de découverte
 python tests/test_discovery.py
 
-# Test complet avec vraie borne
+# Full test with real station / Test complet avec vraie borne
 python tests/test_full.py
 ```
 
-### Prérequis pour le Développement
+### Development Requirements / Prérequis pour le Développement
 
 - Python 3.11+
 - Home Assistant Core 2024.1+
-- Une borne EVSE compatible sur le réseau local
+- A compatible EVSE station on the local network / Une borne EVSE compatible sur le réseau local
 
-### Contributions
+### Protocol Coverage / Couverture du Protocole
 
-Les contributions sont les bienvenues ! Pour contribuer :
+This integration implements **75.7% of the TypeScript reference protocol** (30/37 commands):
+Cette intégration implémente **75,7% du protocole de référence TypeScript** (30/37 commandes) :
 
-1. Fork le projet
-2. Créez une branche feature (`git checkout -b feature/amazing-feature`)
-3. Committez vos changements (`git commit -m 'Add amazing feature'`)
-4. Pushez vers la branche (`git push origin feature/amazing-feature`)
-5. Ouvrez une Pull Request
+#### ✅ Implemented Commands / Commandes Implémentées (30)
+- Authentication: Login sequence (0x8002, 0x0002, 0x0001)
+- Status monitoring: Various status commands (0x0003, 0x0004, 0x0005, 0x000d)
+- Control: Charging control (0x8104, 0x0104, 0x8105, 0x0105)
+- Configuration: Current, fees, system settings (0x8106-0x810d, 0x0106-0x010c)
+- Data transfer: Local charge records (0x000a, 0x800a)
+
+#### ❌ Not Implemented / Non Implémentées (7)
+- Interface configuration (0x810a, 0x010a, 0x810b, 0x010b)
+- Language settings (0x8109, 0x0109)
+- Nickname management (0x8108, 0x0108)
+- Temperature unit settings (0x810f, 0x010f)
+
+### Contributing / Contributions
+
+Contributions are welcome! / Les contributions sont les bienvenues !
+
+1. Fork the project / Fork le projet
+2. Create a feature branch / Créez une branche feature  
+   `git checkout -b feature/amazing-feature`
+3. Commit your changes / Committez vos changements  
+   `git commit -m 'Add amazing feature'`
+4. Push to the branch / Pushez vers la branche  
+   `git push origin feature/amazing-feature`
+5. Open a Pull Request / Ouvrez une Pull Request
+
+### Release Process / Processus de Release
+
+1. Update version in `manifest.json`
+2. Create annotated tag: `git tag -a vX.Y.Z -m "Release notes"`
+3. Push tag: `git push origin vX.Y.Z`
+4. Create GitHub release with changelog
+
+### Testing Guidelines / Directives de Test
+
+- Always test with real EVSE hardware when possible
+- Include protocol packet captures for new features
+- Test authentication edge cases
+- Verify Home Assistant compatibility with recent versions
 
 </details>
 
 ---
 
-## 🙏 Remerciements
+## 🙏 Acknowledgments / Remerciements
+
+This project is based on the original work of [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto) and has been ported and extended for Home Assistant.
 
 Ce projet est basé sur le travail original de [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto) et a été porté et étendu pour Home Assistant.
-
-
