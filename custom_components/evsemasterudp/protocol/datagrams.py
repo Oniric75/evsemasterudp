@@ -288,11 +288,89 @@ class ChargeStart(Datagram):
     """0x8007 (32775) - Démarrer charge (App → EVSE)"""
     COMMAND = 32775
     
+    def __init__(self):
+        super().__init__()
+        self.line_id: int = 1
+        self.user_id: str = "emmgr"
+        self.charge_id: str = ""
+        self.reservation_date: int = 0  # timestamp
+        self.start_type: int = 1
+        self.charge_type: int = 1
+        self.max_duration_minutes: int = 65535
+        self.max_energy_kwh: int = 65535  # en centièmes de kWh
+        self.param3: int = 65535
+        self.max_electricity: int = 6  # Ampères
+        self.single_phase: bool = False
+    
     def pack_payload(self) -> bytes:
-        return b''  # TODO: implémenter selon besoins
+        # Buffer de 47 bytes selon TypeScript
+        buffer = bytearray(47)
+        
+        # Valeurs de sécurité
+        if not (6 <= self.max_electricity <= 32):
+            raise ValueError("maxElectricity must be 6-32A")
+        
+        # Générer un charge_id si vide
+        if not self.charge_id:
+            import time
+            self.charge_id = f"{int(time.time())}"[:12].ljust(16, '0')
+        
+        # Timestamp actuel si pas de réservation
+        if self.reservation_date == 0:
+            import time
+            self.reservation_date = int(time.time())
+        
+        # Remplir le buffer
+        buffer[0] = self.line_id
+        
+        # userId (16 bytes)
+        user_bytes = self.user_id.encode('ascii')[:16]
+        buffer[1:1+len(user_bytes)] = user_bytes
+        
+        # chargeId (16 bytes) 
+        charge_bytes = self.charge_id.encode('ascii')[:16]
+        buffer[17:17+len(charge_bytes)] = charge_bytes
+        
+        # isReservation (0 = immédiat)
+        buffer[33] = 0
+        
+        # reservationDate (4 bytes, big endian)
+        import struct
+        buffer[34:38] = struct.pack('>I', self.reservation_date)
+        
+        # startType, chargeType
+        buffer[38] = self.start_type
+        buffer[39] = self.charge_type
+        
+        # params (big endian)
+        buffer[40:42] = struct.pack('>H', self.max_duration_minutes)
+        buffer[42:44] = struct.pack('>H', self.max_energy_kwh)
+        buffer[44:46] = struct.pack('>H', self.param3)
+        
+        # maxElectricity
+        buffer[46] = self.max_electricity
+        
+        return bytes(buffer)
     
     def unpack_payload(self, buffer: bytes) -> None:
-        pass
+        pass  # App → EVSE seulement
+    
+    def set_max_electricity(self, amps: int):
+        """Définir le courant maximum"""
+        self.max_electricity = amps
+        
+    def set_single_phase(self, single_phase: bool):
+        """Définir le mode monophasé"""
+        self.single_phase = single_phase
+        # Note: À implémenter si le protocole le supporte
+        
+    def set_user_id(self, user_id: str):
+        """Définir l'ID utilisateur"""
+        self.user_id = user_id[:16]  # Limite à 16 caractères
+        
+    def set_charge_id(self, charge_id: str):
+        """Définir l'ID de charge"""
+        self.charge_id = charge_id[:16]  # Limite à 16 caractères
 
 @register_datagram
 class ChargeStartResponse(Datagram):
@@ -505,14 +583,16 @@ class SetAndGetOutputElectricityResponse(Datagram):
     
     def __init__(self):
         super().__init__()
-        self.max_current: int = 16
+        self.action: int = 0  # 0=GET, 1=SET
+        self.electricity: int = 16  # Ampères (6-32A)
     
     def pack_payload(self) -> bytes:
         return b''  # App ne génère pas ce message
     
     def unpack_payload(self, buffer: bytes) -> None:
-        if len(buffer) >= 1:
-            self.max_current = struct.unpack('B', buffer[0:1])[0]
+        if len(buffer) >= 2:
+            self.action = buffer[0]
+            self.electricity = buffer[1]
 
 @register_datagram
 class SetAndGetSystemTime(Datagram):
