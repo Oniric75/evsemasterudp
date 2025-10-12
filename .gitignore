@@ -24,11 +24,14 @@ ENV/
 *.log
 logs/
 
-# Tests temporaires
+# Tests temporaires et scripts de debug
 test_*.tmp
+test_*.py
 debug_*.py
 capture_*.py
 payload_*.hex
+# Exclure les tests temporaires à la racine, garder tests/ organisés
+!/tests/test_*.py
 
 # Home Assistant specific
 home-assistant.log
