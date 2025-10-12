@@ -5,8 +5,9 @@
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/Oniric75/evsemasterudp",
+  "issue_tracker": "https://github.com/Oniric75/evsemasterudp/issues",
   "integration_type": "hub",
   "iot_class": "local_polling",
   "requirements": [],
-  "version": "1.2.1"
+  "version": "1.2.2"
 }
