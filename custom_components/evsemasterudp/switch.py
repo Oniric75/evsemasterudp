@@ -44,8 +44,8 @@ class EVSEChargingSwitch(CoordinatorEntity, SwitchEntity):
         self._attr_device_info = {
             "identifiers": {(DOMAIN, serial)},
             "name": f"EVSE {serial}",
-            "manufacturer": "EVSE",
-            "model": "EmProto",
+            "manufacturer": "Oniric75",
+            "model": "EVSE Master UDP",
         }
     
     @property
