@@ -1,23 +1,47 @@
-/.idea
 # Python cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.pyc
+*.pyo
+*.pyd
+.Python
 
 # Virtual environments
 .venv/
 venv/
 env/
+ENV/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Tests temporaires
+test_*.tmp
+debug_*.py
+capture_*.py
+payload_*.hex
 
 # Home Assistant specific
 home-assistant.log
+*.db
+
+# Fichiers de référence et documentation technique (garder en local uniquement)
+original_typescript/
+DATAGRAMMES_DOCUMENTATION.md
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
 home-assistant_v2.db
 .storage/
 .cloud/

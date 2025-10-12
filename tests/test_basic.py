@@ -25,7 +25,7 @@ async def test_basic_import():
         print("  ✅ Datagram importé")
         
         # Test import communicator
-        from protocol.communicator import Communicator, EVSE
+        from protocol.communicator import Communicator
         print("  ✅ Communicator importé")
         
         # Test import datagrams
@@ -84,15 +84,12 @@ async def test_communicator_creation():
     try:
         print("📡 Test création communicateur...")
         
-        from protocol.communicator import get_communicator
+        from protocol.communicator import Communicator
         
         # Créer communicateur
-        comm = get_communicator()
+        comm = Communicator()
         print("  ✅ Communicateur créé")
         print(f"     Port: {comm.port}")
-        
-        # Nettoyer
-        await comm.stop()
         
         return True, None
         

@@ -10,11 +10,11 @@ from datetime import datetime, timedelta
 
 from .datagram import Datagram, parse_datagrams
 from .datagrams import (
-    RequestLogin, LoginConfirm, PasswordErrorResponse,
+    RequestLogin, LoginConfirm, PasswordErrorResponse, 
     Heading, HeadingResponse, SingleACStatus, SingleACStatusResponse,
     CurrentChargeRecord, RequestChargeStatusRecord, ChargeStart, ChargeStop,
-    SetAndGetOutputElectricity, SetAndGetNickName, SetAndGetSystemTime,
-    EVSERealTimeStatus, UnknownCommand341
+    SetAndGetOutputElectricity, SetAndGetOutputElectricityResponse,
+    Login, LoginResponse, SingleACChargingStatusPublicAuto, SingleACChargingStatusResponse
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ class EVSEInfo:
         self.can_force_single_phase = False
         self.feature = 0
         self.support_new = 0
+        self.device_id = ""  # ID du device extrait de la commande 0x010c
 
 class EVSEConfig:
     """Configuration d'une EVSE"""
@@ -98,6 +99,7 @@ class EVSE:
         self.last_active_login: Optional[datetime] = None
         self.password: Optional[str] = None
         self._logged_in = False
+        self._last_response = None  # Pour attendre les réponses d'authentification
         
         # États possibles selon le protocole
         self.GUN_STATES = {
@@ -159,35 +161,82 @@ class EVSE:
         return await self.communicator.send(datagram, self)
     
     async def login(self, password: str) -> bool:
-        """Se connecter à l'EVSE"""
+        """Se connecter à l'EVSE selon la séquence TypeScript"""
         try:
-            self.password = password
+            _LOGGER.info(f"Tentative de connexion à {self.info.serial} avec mot de passe")
             
-            # Envoyer RequestLogin avec le mot de passe
+            # 1. Envoyer RequestLogin avec le mot de passe
             login_request = RequestLogin()
             login_request.set_device_serial(self.info.serial)
             login_request.set_device_password(password)
             
             await self.send_datagram(login_request)
+            _LOGGER.debug(f"RequestLogin envoyé à {self.info.serial}")
             
-            # Attendre un peu pour la réponse
-            await asyncio.sleep(1)
+            # 2. Attendre LoginResponse ou PasswordErrorResponse (3 secondes max)
+            response = await self._wait_for_response([LoginResponse.COMMAND, PasswordErrorResponse.COMMAND], 3.0)
             
-            # Si on a reçu des infos de login, on est connecté
-            if self.info.model:  # Rempli lors du login
-                self._logged_in = True
-                _LOGGER.info(f"Connexion réussie à {self.info.serial}")
-                
-                # Demander l'état actuel
-                await self.send_datagram(RequestChargeStatusRecord())
-                return True
-            else:
-                _LOGGER.error(f"Échec de connexion à {self.info.serial}")
+            if response and response.get_command() == PasswordErrorResponse.COMMAND:
+                _LOGGER.error(f"Mot de passe incorrect pour {self.info.serial}")
                 return False
+            
+            if not response or response.get_command() != LoginResponse.COMMAND:
+                _LOGGER.error(f"Pas de réponse de connexion de {self.info.serial}")
+                return False
+            
+            # 3. Mot de passe correct, sauvegarder et envoyer LoginConfirm
+            self.password = password
+            _LOGGER.info(f"Mot de passe accepté pour {self.info.serial}")
+            
+            # 4. Envoyer LoginConfirm pour finaliser
+            login_confirm = LoginConfirm()
+            login_confirm.set_device_serial(self.info.serial)
+            login_confirm.set_device_password(password)
+            
+            await self.send_datagram(login_confirm)
+            _LOGGER.debug(f"LoginConfirm envoyé à {self.info.serial}")
+            
+            # 5. Marquer comme connecté
+            self._logged_in = True
+            self.last_active_login = datetime.now()
+            _LOGGER.info(f"Connexion établie avec {self.info.serial}")
+            
+            # 6. Demander la configuration (comme TypeScript)
+            try:
+                await self._fetch_config()
+            except Exception as e:
+                _LOGGER.warning(f"Impossible de récupérer la config pour {self.info.serial}: {e}")
+            
+            return True
                 
         except Exception as e:
-            _LOGGER.error(f"Erreur lors de la connexion: {e}")
+            _LOGGER.error(f"Erreur lors de la connexion à {self.info.serial}: {e}")
             return False
+    
+    async def _wait_for_response(self, expected_commands: list, timeout: float):
+        """Attendre une réponse avec commands spécifiques"""
+        start_time = asyncio.get_event_loop().time()
+        
+        while (asyncio.get_event_loop().time() - start_time) < timeout:
+            # Vérifier si on a reçu une réponse avec une commande attendue
+            if hasattr(self, '_last_response') and self._last_response:
+                if self._last_response.get_command() in expected_commands:
+                    response = self._last_response
+                    self._last_response = None  # Consommer la réponse
+                    return response
+            
+            await asyncio.sleep(0.1)
+        
+        return None
+    
+    async def _fetch_config(self):
+        """Récupérer la configuration de l'EVSE"""
+        # Envoyer une demande de statut pour récupérer les données
+        heading = Heading()
+        heading.set_device_serial(self.info.serial)
+        heading.set_device_password(self.password)
+        await self.send_datagram(heading)
+        _LOGGER.debug(f"Demande de configuration envoyée à {self.info.serial}")
     
     async def charge_start(self, max_amps: int = 6, single_phase: bool = False, 
                           user_id: str = "", charge_id: str = "") -> bool:
@@ -264,14 +313,14 @@ class EVSE:
             raise RuntimeError("Non connecté à l'EVSE")
         
         try:
-            set_name = SetAndGetNickName()
-            set_name.set_device_serial(self.info.serial)
-            set_name.set_device_password(self.password)
-            set_name.name = name
-            
-            await self.send_datagram(set_name)
-            self.config.name = name
-            _LOGGER.info(f"Nom défini à: {name}")
+            # TODO: Réimplémenter SetAndGetNickName
+            # set_name = SetAndGetNickName()
+            # set_name.set_device_serial(self.info.serial)
+            # set_name.set_device_password(self.password)
+            # set_name.name = name
+            # await self.send_datagram(set_name)
+            # self.config.name = name
+            _LOGGER.info(f"Configuration du nom à implémenter: {name}")
             return True
             
         except Exception as e:
@@ -284,12 +333,12 @@ class EVSE:
             raise RuntimeError("Non connecté à l'EVSE")
         
         try:
-            sync_time = SetAndGetSystemTime()
-            sync_time.set_device_serial(self.info.serial)
-            sync_time.set_device_password(self.password)
-            
-            await self.send_datagram(sync_time)
-            _LOGGER.info("Heure synchronisée")
+            # TODO: Réimplémenter SetAndGetSystemTime
+            # sync_time = SetAndGetSystemTime()
+            # sync_time.set_device_serial(self.info.serial)
+            # sync_time.set_device_password(self.password)
+            # await self.send_datagram(sync_time)
+            _LOGGER.info("Synchronisation du temps à implémenter")
             return True
             
         except Exception as e:
@@ -406,13 +455,23 @@ class Communicator:
             if evse.update_ip(ip, port):
                 await self._notify_callbacks('evse_changed', evse)
         
+        # Mettre à jour last_seen et stocker la réponse pour l'authentification
+        evse.last_seen = datetime.now()
+        evse._last_response = datagram  # Stocker pour _wait_for_response
+        
         # Traiter le datagramme spécifique
         if isinstance(datagram, RequestLogin):
             await self._handle_login(evse, datagram)
+        elif isinstance(datagram, LoginResponse):
+            await self._handle_login_response(evse, datagram)
         elif isinstance(datagram, SingleACStatus):
             await self._handle_status(evse, datagram)
-        elif isinstance(datagram, EVSERealTimeStatus):
-            await self._handle_realtime_status(evse, datagram)
+        elif isinstance(datagram, SingleACChargingStatusPublicAuto):
+            await self._handle_charging_status(evse, datagram)
+        # elif isinstance(datagram, EVSERealTimeStatus):
+        #     await self._handle_realtime_status(evse, datagram)
+        # elif isinstance(datagram, EVSECurrentConfiguration):
+        #     await self._handle_current_configuration(evse, datagram)
         elif isinstance(datagram, CurrentChargeRecord):
             await self._handle_charge_record(evse, datagram)
         elif isinstance(datagram, Heading):
@@ -420,9 +479,15 @@ class Communicator:
         elif isinstance(datagram, PasswordErrorResponse):
             _LOGGER.error(f"Erreur de mot de passe pour {serial}")
             evse._logged_in = False
-        elif isinstance(datagram, UnknownCommand341):
-            _LOGGER.debug(f"Commande 341 reçue de {serial}, données: {datagram.raw_data.hex()}")
-            # Pas de traitement spécial nécessaire pour l'instant
+        # elif isinstance(datagram, UnknownCommand341):
+        #     _LOGGER.debug(f"Commande 341 reçue de {serial}, données: {datagram.raw_data.hex()}")
+        #     # Pas de traitement spécial nécessaire pour l'instant
+    
+    async def _handle_login_response(self, evse: EVSE, datagram: LoginResponse):
+        """Traiter une réponse de login réussie (0x0002)"""
+        _LOGGER.info(f"LoginResponse reçue de {evse.info.serial}")
+        # Cette réponse indique que le mot de passe était correct
+        # Le vrai login sera complété par LoginConfirm dans la méthode login()
     
     async def _handle_login(self, evse: EVSE, datagram: RequestLogin):
         """Traiter une réponse de login"""
@@ -452,8 +517,9 @@ class Communicator:
         if not evse.state:
             evse.state = EVSEState()
         
+        # Copier les données du SingleACStatus vers EVSEState
         evse.state.current_power = datagram.current_power
-        evse.state.current_amount = datagram.current_amount
+        evse.state.current_amount = datagram.total_kwh_counter  # Corriger le mapping
         evse.state.l1_voltage = datagram.l1_voltage
         evse.state.l1_electricity = datagram.l1_electricity
         evse.state.l2_voltage = datagram.l2_voltage
@@ -467,6 +533,8 @@ class Communicator:
         evse.state.output_state = datagram.output_state
         evse.state.errors = datagram.errors
         
+        _LOGGER.debug(f"Status reçu pour {evse.info.serial}: L1={datagram.l1_voltage}V, Temp={datagram.inner_temp}°C")
+        
         # Répondre au status
         response = SingleACStatusResponse()
         response.set_device_serial(evse.info.serial)
@@ -475,31 +543,47 @@ class Communicator:
         
         await self._notify_callbacks('evse_state_changed', evse)
     
-    async def _handle_realtime_status(self, evse: EVSE, datagram: EVSERealTimeStatus):
-        """Traiter les données de statut temps réel (commande 0x000d)"""
-        if not evse.state:
-            evse.state = EVSEState()
+    async def _handle_charging_status(self, evse: EVSE, datagram: SingleACChargingStatusPublicAuto):
+        """Traiter le statut de charge automatique AC (commande 0x0005)"""
+        _LOGGER.debug(f"Statut de charge reçu pour {evse.info.serial}")
         
-        # Mettre à jour les données d'état avec les valeurs temps réel
-        evse.state.l1_voltage = datagram.voltage_l1
-        evse.state.l2_voltage = datagram.voltage_l2
-        evse.state.l3_voltage = datagram.voltage_l3
-        evse.state.l1_electricity = datagram.current_l1
-        evse.state.l2_electricity = datagram.current_l2
-        evse.state.l3_electricity = datagram.current_l3
-        evse.state.current_power = datagram.power
-        evse.state.inner_temp = datagram.temperature
-        evse.state.outer_temp = datagram.temperature  # Utiliser la même température
-        evse.state.gun_state = datagram.gun_state
-        evse.state.output_state = datagram.output_state
-        evse.state.errors = [datagram.errors] if datagram.errors else []
+        # Mettre à jour les informations de charge si disponibles
+        if not evse.current_charge:
+            evse.current_charge = EVSECurrentCharge()
         
-        # Log pour debug
-        _LOGGER.debug(f"Statut temps réel reçu de {evse.info.serial}: "
-                     f"Tension L1={datagram.voltage_l1}V, Courant L1={datagram.current_l1}A, "
-                     f"Puissance={datagram.power}W, Temp={datagram.temperature}°C")
+        # Copier les données du statut de charge
+        evse.current_charge.charge_id = datagram.charge_id
+        evse.current_charge.current_state = datagram.current_state
+        evse.current_charge.start_type = datagram.start_type
+        evse.current_charge.charge_type = datagram.charge_type
+        evse.current_charge.max_duration_minutes = datagram.max_duration_minutes
+        evse.current_charge.max_energy_kwh = datagram.max_energy_kwh
+        evse.current_charge.max_electricity = datagram.max_electricity
+        evse.current_charge.start_date = datagram.start_date
+        evse.current_charge.duration_seconds = datagram.duration_seconds
+        evse.current_charge.start_kwh_counter = datagram.start_kwh_counter
+        evse.current_charge.current_kwh_counter = datagram.current_kwh_counter
+        evse.current_charge.charge_kwh = datagram.charge_kwh
+        evse.current_charge.charge_price = datagram.charge_price
+        evse.current_charge.charge_fee = datagram.charge_fee
         
-        await self._notify_callbacks('evse_state_changed', evse)
+        # Envoyer accusé de réception (comme dans le TypeScript)
+        response = SingleACChargingStatusResponse()
+        response.set_device_serial(evse.info.serial)
+        response.set_device_password(evse.password)
+        await evse.send_datagram(response)
+        
+        await self._notify_callbacks('evse_charge_status_changed', evse)
+    
+    # MÉTHODES TEMPORAIREMENT DÉSACTIVÉES - À RÉIMPLÉMENTER
+    
+    # async def _handle_realtime_status(self, evse: EVSE, datagram: EVSERealTimeStatus):
+    #     """Traiter les données de statut temps réel (commande 0x000d) - DÉSACTIVÉ"""
+    #     pass
+    
+    # async def _handle_current_configuration(self, evse: EVSE, datagram: EVSECurrentConfiguration):
+    #     """Traiter la configuration de courant (commande 0x010c) - DÉSACTIVÉ"""
+    #     pass
     
     async def _handle_charge_record(self, evse: EVSE, datagram: CurrentChargeRecord):
         """Traiter un enregistrement de charge"""

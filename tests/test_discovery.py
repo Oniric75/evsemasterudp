@@ -17,10 +17,10 @@ sys.path.insert(0, evse_module_path)
 async def test_discovery():
     """Test découverte automatique"""
     try:
-        from protocol import get_communicator
+        from protocol.communicator import Communicator
         
         print("🔍 Démarrage découverte EVSE...")
-        comm = get_communicator()
+        comm = Communicator()
         port = await comm.start()
         print(f"   ✅ Écoute sur port {port}")
         

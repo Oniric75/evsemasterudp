@@ -6,6 +6,7 @@ Test complet d'authentification et communication EVSE
 import asyncio
 import sys
 import os
+import getpass
 
 # Ajouter le path vers le protocole dans custom_components
 # Utilise le chemin relatif depuis ce fichier
@@ -17,10 +18,11 @@ sys.path.insert(0, evse_module_path)
 async def test_full_communication():
     """Test communication complète avec EVSE"""
     try:
-        from protocol import get_communicator, RequestLogin, Heading
+        from protocol.communicator import Communicator
+        from protocol.datagrams import RequestLogin, Heading
         
         print("🔍 Démarrage découverte et communication EVSE...")
-        comm = get_communicator()
+        comm = Communicator()
         port = await comm.start()
         print(f"   ✅ Écoute sur port {port}")
         
@@ -39,35 +41,27 @@ async def test_full_communication():
             print("❌ Aucun EVSE découvert")
             return False
         
-        # Configurer le mot de passe
-        evse.password = "123456"
-        print(f"🔑 Configuration mot de passe: {evse.password}")
-        
-        # Test authentification
+        # Demander le mot de passe de manière interactive
+        print(f"\n🔑 EVSE détecté: {evse.info.serial}")
+        password = getpass.getpass("🔐 Entrez le mot de passe EVSE: ")
+        print(f"   ✅ Mot de passe saisi")
+
+        # Test authentification avec la nouvelle méthode
         print("🔐 Test authentification...")
-        login = RequestLogin()
-        login.device_serial = evse.info.serial
-        login.device_password = evse.password
+        auth_success = await evse.login(password)
         
-        await comm.send(login, evse)
-        print("   ✅ RequestLogin envoyé")
-        
-        # Attendre l'authentification
-        await asyncio.sleep(2.0)
-        
-        if evse._logged_in:
+        if auth_success:
             print("   🎉 Authentification réussie !")
         else:
-            print("   ⚠️ Authentification en attente...")
+            print("   ❌ Authentification échouée")
         
-        # Test keepalive/status
+        # Test récupération du statut (seulement si connecté)
         print("📊 Test récupération du statut...")
-        heading = Heading()
-        heading.device_serial = evse.info.serial
-        heading.device_password = evse.password
-        
-        await comm.send(heading, evse)
-        print("   ✅ Heading envoyé")
+        if auth_success:
+            # Attendre un peu pour que les données arrivent
+            await asyncio.sleep(2.0)
+        else:
+            print("   ⚠️ Pas connecté - test du statut ignoré")
         
         # Attendre la réponse
         await asyncio.sleep(2.0)
@@ -76,10 +70,10 @@ async def test_full_communication():
             print("   🎉 Statut reçu !")
             print(f"      ⚡ Gun state: {evse.state.gun_state}")
             print(f"      🔌 Output state: {evse.state.output_state}")
-            print(f"      📏 Voltage: {evse.state.voltage}V")
-            print(f"      🔋 Current: {evse.state.current}A")
-            print(f"      🌡️ Temp inner: {evse.state.temp_inner}°C")
-            print(f"      🌡️ Temp outer: {evse.state.temp_outer}°C")
+            print(f"      📏 Voltage L1: {getattr(evse.state, 'l1_voltage', 'N/A')}V")
+            print(f"      🔋 Current L1: {getattr(evse.state, 'l1_current', 'N/A')}A")
+            print(f"      🌡️ Temp inner: {getattr(evse.state, 'inner_temp', 'N/A')}°C")
+            print(f"      🌡️ Temp outer: {getattr(evse.state, 'outer_temp', 'N/A')}°C")
         else:
             print("   ⚠️ Aucun statut reçu")
         
@@ -87,7 +81,20 @@ async def test_full_communication():
         await comm.stop()
         print("   ✅ Arrêté")
         
-        return True
+        # Évaluer le succès réel du test
+        data_received = evse.state is not None if hasattr(evse, 'state') else False
+        
+        print(f"\n📊 RÉSULTATS RÉELS:")
+        print(f"   🔐 Authentification: {'✅ Réussie' if auth_success else '❌ Échouée'}")
+        print(f"   📡 Données reçues: {'✅ Oui' if data_received else '❌ Non'}")
+        
+        if data_received:
+            print(f"   📋 DONNÉES RÉCUPÉRÉES:")
+            print(f"      ⚡ Voltage L1: {getattr(evse.state, 'l1_voltage', 'N/A')}V")
+            print(f"      🌡️ Température: {getattr(evse.state, 'inner_temp', 'N/A')}°C") 
+            print(f"      🔋 Current L1: {getattr(evse.state, 'l1_current', 'N/A')}A")
+        
+        return auth_success and data_received
         
     except Exception as e:
         print(f"❌ Erreur: {e}")
@@ -98,15 +105,18 @@ async def test_full_communication():
 if __name__ == "__main__":
     print("🧪 Test complet communication EVSE Python")
     print("🔌 Test: Découverte → Authentification → Statut")
-    print("📱 EVSE: 1368844619649410 avec password 123456\n")
+    print("📱 Le test va découvrir votre EVSE et vous demander le mot de passe\n")
     
     success = asyncio.run(test_full_communication())
     
     if success:
-        print("\n🎉 Test complet réussi ! Le protocole Python est 100% fonctionnel.")
+        print("\n🎉 Test complet réussi ! Le protocole Python fonctionne parfaitement.")
         print("   ✅ Découverte automatique")
-        print("   ✅ Authentification") 
-        print("   ✅ Communication bidirectionnelle")
+        print("   ✅ Authentification réussie") 
+        print("   ✅ Données reçues (voltage, température, current)")
         print("\n🏠 Votre intégration Home Assistant est prête !")
     else:
-        print("\n❌ Test échoué - des ajustements sont nécessaires")
+        print("\n❌ Test échoué - vérifiez:")
+        print("   🔐 Le mot de passe EVSE")
+        print("   📡 La connexion réseau")
+        print("   🔌 L'état de l'EVSE")
