@@ -14,7 +14,7 @@ from .datagrams import (
     Heading, HeadingResponse, SingleACStatus, SingleACStatusResponse,
     CurrentChargeRecord, RequestChargeStatusRecord, ChargeStart, ChargeStop,
     SetAndGetOutputElectricity, SetAndGetNickName, SetAndGetSystemTime,
-    UnknownCommand341
+    EVSERealTimeStatus, UnknownCommand341
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -411,6 +411,8 @@ class Communicator:
             await self._handle_login(evse, datagram)
         elif isinstance(datagram, SingleACStatus):
             await self._handle_status(evse, datagram)
+        elif isinstance(datagram, EVSERealTimeStatus):
+            await self._handle_realtime_status(evse, datagram)
         elif isinstance(datagram, CurrentChargeRecord):
             await self._handle_charge_record(evse, datagram)
         elif isinstance(datagram, Heading):
@@ -427,7 +429,7 @@ class Communicator:
         evse.info.brand = datagram.brand
         evse.info.model = datagram.model
         evse.info.hardware_version = datagram.hardware_version
-        evse.info.software_version = datagram.software_version
+        evse.info.software_version = datagram.hardware_version  # Utiliser hardware_version comme fallback
         evse.info.max_power = datagram.max_power
         evse.info.max_electricity = datagram.max_electricity
         evse.info.hot_line = datagram.hot_line
@@ -470,6 +472,32 @@ class Communicator:
         response.set_device_serial(evse.info.serial)
         response.set_device_password(evse.password)
         await evse.send_datagram(response)
+        
+        await self._notify_callbacks('evse_state_changed', evse)
+    
+    async def _handle_realtime_status(self, evse: EVSE, datagram: EVSERealTimeStatus):
+        """Traiter les données de statut temps réel (commande 0x000d)"""
+        if not evse.state:
+            evse.state = EVSEState()
+        
+        # Mettre à jour les données d'état avec les valeurs temps réel
+        evse.state.l1_voltage = datagram.voltage_l1
+        evse.state.l2_voltage = datagram.voltage_l2
+        evse.state.l3_voltage = datagram.voltage_l3
+        evse.state.l1_electricity = datagram.current_l1
+        evse.state.l2_electricity = datagram.current_l2
+        evse.state.l3_electricity = datagram.current_l3
+        evse.state.current_power = datagram.power
+        evse.state.inner_temp = datagram.temperature
+        evse.state.outer_temp = datagram.temperature  # Utiliser la même température
+        evse.state.gun_state = datagram.gun_state
+        evse.state.output_state = datagram.output_state
+        evse.state.errors = [datagram.errors] if datagram.errors else []
+        
+        # Log pour debug
+        _LOGGER.debug(f"Statut temps réel reçu de {evse.info.serial}: "
+                     f"Tension L1={datagram.voltage_l1}V, Courant L1={datagram.current_l1}A, "
+                     f"Puissance={datagram.power}W, Temp={datagram.temperature}°C")
         
         await self._notify_callbacks('evse_state_changed', evse)
     

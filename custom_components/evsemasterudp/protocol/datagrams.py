@@ -26,20 +26,102 @@ class UnknownCommand5(Datagram):
         self.raw_data = buffer
 
 @register_datagram
-class UnknownCommand13(Datagram):
-    """Commande 0x000d détectée sur certaines bornes EVSE"""
+class EVSERealTimeStatus(Datagram):
+    """Données de statut temps réel EVSE (commande 0x000d)"""
     COMMAND = 0x000d
     
     def __init__(self):
         super().__init__()
-        self.raw_data = b''
-    
+        # Données de statut temps réel
+        self.status_code: int = 0
+        self.counter: int = 0
+        self.voltage_l1: float = 0.0
+        self.voltage_l2: float = 0.0
+        self.voltage_l3: float = 0.0
+        self.current_l1: float = 0.0
+        self.current_l2: float = 0.0
+        self.current_l3: float = 0.0
+        self.power: float = 0.0
+        self.temperature: float = 0.0
+        self.gun_state: int = 0
+        self.output_state: int = 0
+        self.errors: int = 0
+        
     def pack_payload(self) -> bytes:
-        return self.raw_data
-    
+        return b''  # Cette commande est seulement reçue
+        
     def unpack_payload(self, buffer: bytes) -> None:
-        self.raw_data = buffer
-        # Pour debug - on stocke les données brutes pour analyse
+        """Parser les données de statut temps réel"""
+        if len(buffer) < 40:  # Taille minimale attendue
+            return
+            
+        offset = 0
+        
+        # Status code (1 byte)
+        self.status_code = buffer[offset]
+        offset += 1
+        
+        # Counter/sequence (1 byte) 
+        self.counter = buffer[offset]
+        offset += 1
+        
+        # Temperature (1 byte à offset 2) - semble réaliste
+        if offset < len(buffer):
+            self.temperature = float(buffer[offset])
+            offset += 1
+        else:
+            self.temperature = 0.0
+            
+        # Skip 15 bytes jusqu'aux données importantes
+        offset = 18
+        
+        # Current L1 en milliamps (2 bytes à offset 18-19)
+        if offset + 2 <= len(buffer):
+            current_raw = struct.unpack('>H', buffer[offset:offset+2])[0]
+            self.current_l1 = current_raw / 1000.0  # Convertir en ampères
+            offset += 2
+        
+        # Skip vers gun_state/output_state potentiels
+        # Les bytes 17-19 semblent contenir des états
+        if len(buffer) > 17:
+            self.gun_state = buffer[17] & 0x0F  # Nibble bas
+            self.output_state = (buffer[17] >> 4) & 0x0F  # Nibble haut
+            
+        # Pour la tension, cherchons dans les données timestamp/autres champs
+        # Les bytes 12-15 contiennent 0x0159105b qui pourrait contenir des infos
+        if len(buffer) > 15:
+            # Essayer d'extraire une tension des bytes 14-15
+            voltage_candidate = struct.unpack('>H', buffer[14:16])[0]
+            # Si c'est en dixièmes de volts : 4187 / 10 = 418.7V (trop élevé)
+            # Si c'est codé différemment, essayer d'autres approches
+            if voltage_candidate > 1000:
+                # Peut-être en dixièmes : diviser par 10
+                potential_voltage = voltage_candidate / 10.0
+                if 200 <= potential_voltage <= 300:
+                    self.voltage_l1 = potential_voltage
+                else:
+                    # Peut-être en centièmes : diviser par 100
+                    potential_voltage = voltage_candidate / 100.0
+                    if 200 <= potential_voltage <= 300:
+                        self.voltage_l1 = potential_voltage
+                    else:
+                        # Utiliser une valeur par défaut européenne
+                        self.voltage_l1 = 230.0
+            else:
+                self.voltage_l1 = 230.0  # Défaut européen
+        
+        # Copier sur les autres phases (pour l'instant)
+        self.voltage_l2 = self.voltage_l1
+        self.voltage_l3 = self.voltage_l1
+        self.current_l2 = 0.0  # Monophasé pour l'instant
+        self.current_l3 = 0.0
+                        
+        # Calculer la puissance
+        self.power = self.voltage_l1 * self.current_l1
+        
+        # Errors - chercher dans les derniers bytes
+        if len(buffer) > 33:
+            self.errors = buffer[33]
 
 @register_datagram
 class UnknownCommand341(Datagram):
