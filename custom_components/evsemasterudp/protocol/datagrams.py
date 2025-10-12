@@ -229,29 +229,6 @@ class HeadingResponse(Datagram):
 # ============================================================================
 
 @register_datagram
-class SetAndGetOutputElectricity(Datagram):
-    """0x810c (33036) - Configurer courant max (App → EVSE)"""
-    COMMAND = 33036
-    
-    def __init__(self):
-        super().__init__()
-        self.action: int = 0  # 0=GET, 1=SET
-        self.electricity: int = 6  # Ampères (6-32A)
-    
-    def pack_payload(self) -> bytes:
-        buffer = bytearray([self.action, 0x00])
-        if self.action == 1:  # SET
-            if not (6 <= self.electricity <= 32):
-                raise ValueError("Current must be 6-32A")
-            buffer[1] = self.electricity
-        return bytes(buffer)
-    
-    def unpack_payload(self, buffer: bytes) -> None:
-        if len(buffer) >= 2:
-            self.action = buffer[0]
-            self.electricity = buffer[1]
-
-@register_datagram
 class SetAndGetChargeFeeResponse(Datagram):
     """0x0104 (260) - Réponse tarif de charge (EVSE → App)"""
     COMMAND = 260
@@ -505,14 +482,21 @@ class SetAndGetOutputElectricity(Datagram):
     
     def __init__(self):
         super().__init__()
-        self.max_current: int = 16  # Ampères
+        self.action: int = 0  # 0=GET, 1=SET
+        self.electricity: int = 6  # Ampères (6-32A)
     
     def pack_payload(self) -> bytes:
-        return struct.pack('B', self.max_current)
+        buffer = bytearray([self.action, 0x00])
+        if self.action == 1:  # SET
+            if not (6 <= self.electricity <= 32):
+                raise ValueError("Current must be 6-32A")
+            buffer[1] = self.electricity
+        return bytes(buffer)
     
     def unpack_payload(self, buffer: bytes) -> None:
-        if len(buffer) >= 1:
-            self.max_current = struct.unpack('B', buffer[0:1])[0]
+        if len(buffer) >= 2:
+            self.action = buffer[0]
+            self.electricity = buffer[1]
 
 @register_datagram
 class SetAndGetOutputElectricityResponse(Datagram):
