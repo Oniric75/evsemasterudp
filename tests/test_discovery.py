@@ -7,8 +7,12 @@ import asyncio
 import sys
 import os
 
-# Ajouter le path vers le protocole
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# Ajouter le path vers le protocole dans custom_components
+# Utilise le chemin relatif depuis ce fichier
+test_dir = os.path.dirname(__file__)
+project_root = os.path.dirname(test_dir)
+evse_module_path = os.path.join(project_root, 'custom_components', 'evsemasterudp')
+sys.path.insert(0, evse_module_path)
 
 async def test_discovery():
     """Test découverte automatique"""
