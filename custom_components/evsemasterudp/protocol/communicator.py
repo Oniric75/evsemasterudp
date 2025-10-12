@@ -167,8 +167,8 @@ class EVSE:
             
             # 1. Envoyer RequestLogin avec le mot de passe
             login_request = RequestLogin()
-            login_request.device_serial = self.info.serial
-            login_request.device_password = password
+            login_request.set_device_serial(self.info.serial)
+            login_request.set_device_password(password)
             
             await self.send_datagram(login_request)
             _LOGGER.debug(f"RequestLogin envoyé à {self.info.serial}")
@@ -190,8 +190,8 @@ class EVSE:
             
             # 4. Envoyer LoginConfirm pour finaliser
             login_confirm = LoginConfirm()
-            login_confirm.device_serial = self.info.serial
-            login_confirm.device_password = password
+            login_confirm.set_device_serial(self.info.serial)
+            login_confirm.set_device_password(password)
             
             await self.send_datagram(login_confirm)
             _LOGGER.debug(f"LoginConfirm envoyé à {self.info.serial}")
