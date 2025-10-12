@@ -482,8 +482,9 @@ class Communicator:
         elif isinstance(datagram, Heading):
             await self._handle_heading(evse, datagram)
         elif isinstance(datagram, PasswordErrorResponse):
-            _LOGGER.error(f"Erreur de mot de passe pour {serial}")
-            evse._logged_in = False
+            # PasswordErrorResponse sont gérés dans la méthode login() via _wait_for_response
+            # Ignorer ceux qui arrivent ici pour éviter les logs d'erreur trompeurs
+            _LOGGER.debug(f"PasswordErrorResponse reçu pour {serial} (géré par la logique d'auth)")
         # elif isinstance(datagram, UnknownCommand341):
         #     _LOGGER.debug(f"Commande 341 reçue de {serial}, données: {datagram.raw_data.hex()}")
         #     # Pas de traitement spécial nécessaire pour l'instant
