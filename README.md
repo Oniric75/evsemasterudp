@@ -30,6 +30,8 @@ This integration allows you to control and monitor your EVSE charging station fr
 
 > **EQUIPMENT PROTECTION**: Repeated charge starts can prematurely wear out your charging station's contactors. This integration includes automatic protections, but **use is at your own risk**.
 
+> **📱 APPLICATION CONFLICT**: **DO NOT use the "EVSE Master" mobile app simultaneously with this integration!** Running both at the same time will cause connection conflicts and crash both systems. If you need to use the mobile app, temporarily disable the Home Assistant integration first.
+
 **Built-in protections**:
 - 🛡️ **Rapid change protection**: Prevents too frequent starts/stops (5 min minimum delay)
 - 🔒 **16A safety fallback**: In case of error, automatically limits to 16A
@@ -39,6 +41,7 @@ This integration allows you to control and monitor your EVSE charging station fr
 - Avoid frequent starts/stops (< 5 minutes interval)
 - Plan your automations to avoid rapid cycles
 - Monitor your equipment's health status
+- **Disable the integration before using the mobile app**
 
 ## 🏗️ Compatibility
 
@@ -186,6 +189,8 @@ Cette intégration permet de contrôler et surveiller votre borne de recharge EV
 
 > **PROTECTION DE L'ÉQUIPEMENT** : Les démarrages répétés de charge peuvent user prématurément les contacteurs de votre borne. Cette intégration inclut des protections automatiques, mais **l'utilisation reste à vos propres risques**.
 
+> **📱 CONFLIT D'APPLICATION** : **N'utilisez PAS l'application mobile "EVSE Master" en même temps que cette intégration !** L'utilisation simultanée des deux provoque des conflits de connexion et fait planter les deux systèmes. Si vous devez utiliser l'application mobile, désactivez temporairement l'intégration Home Assistant en premier.
+
 **Protections intégrées** :
 - 🛡️ **Protection contre les changements rapides** : Empêche les démarrages/arrêts trop fréquents (délai minimum 5 min)
 - 🔒 **Fallback de sécurité 16A** : En cas d'erreur, limite automatiquement à 16A
@@ -195,6 +200,7 @@ Cette intégration permet de contrôler et surveiller votre borne de recharge EV
 - Évitez les démarrages/arrêts fréquents (< 5 minutes d'intervalle)
 - Planifiez vos automations pour éviter les cycles rapides
 - Surveillez l'état de santé de votre équipement
+- **Désactivez l'intégration avant d'utiliser l'application mobile**
 
 ## 🏗️ Compatibilité
 
