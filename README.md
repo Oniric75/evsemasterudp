@@ -211,10 +211,4 @@ Les contributions sont les bienvenues ! Pour contribuer :
 
 Ce projet est basé sur le travail original de [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto) et a été porté et étendu pour Home Assistant.
 
-├── 📁 home_assistant/
-
-1. Ouvrez HACS dans Home Assistant│   └── 📁 custom_components/
-
-2. Allez dans "Intégrations"│       └── 📁 evsemasterudp/          # 🏠 INTÉGRATION HOME ASSISTANT
-
 
