@@ -1,5 +1,12 @@
 # EVSE Master UDP - Home Assistant Integration
 
+> **🙏 ACKNOWLEDGMENT / REMERCIEMENTS**  
+> This project is based on the excellent work of [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto). Without their invaluable reverse-engineering of the EVSE Master UDP protocol, this Home Assistant integration would not have been possible. Full credit and thanks to the original author! 🌟  
+> 
+> Ce projet est basé sur l'excellent travail de [johnwoo-nl/emproto](https://github.com/johnwoo-nl/emproto). Sans leur précieux reverse-engineering du protocole UDP EVSE Master, cette intégration Home Assistant n'aurait pas été possible. Tout le crédit et nos remerciements à l'auteur original ! 🌟
+
+---
+
 > **🌐 This README is available in two languages / Ce README est disponible en deux langues :**
 > - [🇺🇸 **English Version**](#-english-version) (below / ci-dessous)
 > - [🇫🇷 **Version Française**](#-version-française) (scroll down / plus bas)
