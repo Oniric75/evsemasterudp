@@ -12,6 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.components.persistent_notification import create
 
 from .evse_client import get_evse_client, EVSEClient
 
@@ -110,6 +111,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     # Configurer les plateformes (sensor, switch, number)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    
+    # Notification pour recommander un redémarrage après installation/mise à jour
+    create(
+        hass,
+        f"EVSE Master UDP configuré avec succès pour l'EVSE {serial}.\n\n"
+        "Il est recommandé de redémarrer Home Assistant pour assurer un fonctionnement optimal.",
+        title="EVSE Master UDP - Installation réussie",
+        notification_id=f"evsemasterudp_setup_{serial}"
+    )
     
     return True
 
