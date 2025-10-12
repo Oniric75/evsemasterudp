@@ -1,6 +1,5 @@
 """
 Communicateur UDP pour les EVSEs EmProto
-Port de la logique TypeScript vers Python
 """
 import asyncio
 import socket

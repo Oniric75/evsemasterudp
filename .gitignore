@@ -10,10 +10,6 @@ __pycache__/
 venv/
 env/
 
-# Node.js
-node_modules/
-package-lock.json
-
 # IDE
 .vscode/
 .idea/
@@ -30,23 +26,9 @@ home-assistant_v2.db
 .DS_Store
 Thumbs.db
 Desktop.ini
-env/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Node modules (legacy)
-node_modules/
-package-lock.json
 
 # Tests
 tests/output/
 tests/logs/
-
-# Home Assistant
-home-assistant.log
 *.db
 dist/

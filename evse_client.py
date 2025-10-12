@@ -1,5 +1,5 @@
 """
-Client EVSE pour Home Assistant - Port complet de la logique TypeScript
+Client EVSE pour Home Assistant
 """
 import asyncio
 import logging

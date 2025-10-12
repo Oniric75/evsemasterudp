@@ -1,6 +1,5 @@
 """
 Classe de base pour les datagrammes EVSE EmProto
-Port de la logique TypeScript vers Python
 """
 import struct
 from abc import ABC, abstractmethod

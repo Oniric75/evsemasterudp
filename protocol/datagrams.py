@@ -1,6 +1,5 @@
 """
 Implémentations des datagrammes EVSE EmProto
-Port des datagrammes TypeScript vers Python
 """
 import struct
 from typing import Optional

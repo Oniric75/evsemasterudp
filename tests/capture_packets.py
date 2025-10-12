@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Analyseur de paquets UDP pour comparer TypeScript vs Python
+Analyseur de paquets UDP pour debug du protocole EVSE
 """
 
 import socket
@@ -64,7 +64,6 @@ def parse_packet(data: bytes, source: str) -> str:
 def listen_udp(port: int = 28376, timeout: int = 30):
     """Écouter les paquets UDP"""
     print(f"🎧 Écoute des paquets UDP sur port {port} (timeout: {timeout}s)")
-    print("📝 Démarrez la version TypeScript dans un autre terminal pour comparer\n")
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -125,28 +124,14 @@ def test_python_packet():
         traceback.print_exc()
         return None
 
-def compare_with_typescript():
-    """Comparer avec un paquet TypeScript de référence"""
-    print("\n🔍 === COMPARAISON TYPESCRIPT vs PYTHON ===")
-    
-    # Test paquet Python
-    python_packet = test_python_packet()
-    
-    print("\n📋 Pour comparer avec TypeScript:")
-    print("1. Lancez: npx tsx clitest/index.ts 1368844619649410=123456")
-    print("2. Dans un autre terminal: python capture_packets.py")
-    print("3. Comparez les paquets générés")
-
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         if sys.argv[1] == "listen":
             listen_udp()
         elif sys.argv[1] == "test":
             test_python_packet()
-        elif sys.argv[1] == "compare":
-            compare_with_typescript()
         else:
-            print("Usage: python capture_packets.py [listen|test|compare]")
+            print("Usage: python capture_packets.py [listen|test]")
     else:
         print("""
 🔍 Analyseur de paquets EVSE
@@ -154,11 +139,8 @@ if __name__ == "__main__":
 USAGE:
   python capture_packets.py listen    # Écouter les paquets UDP
   python capture_packets.py test      # Tester génération Python
-  python capture_packets.py compare   # Comparer TS vs Python
 
 WORKFLOW DE DÉBOGAGE:
 1. python capture_packets.py test     # Voir paquet Python
 2. python capture_packets.py listen   # Écouter réseau  
-3. npx tsx clitest/index.ts ...       # Lancer TS dans autre terminal
-4. Comparer les différences
         """)
