@@ -1,15 +1,4 @@
-"""Interrupteurs pour l'intégration EVSE EmProto"""
-from __future__ import annotations
-
-from typing import Any
-
-from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-
-from . import DOMAIN
+"""(Removed legacy switch placeholder kept intentionally blank)."""
 
 async def async_setup_entry(
     hass: HomeAssistant,

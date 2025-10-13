@@ -19,7 +19,7 @@ from .evse_client import get_evse_client, EVSEClient
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "evsemasterudp"
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.NUMBER]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON, Platform.NUMBER]
 
 # Intervalle de mise à jour (en secondes)
 UPDATE_INTERVAL = timedelta(seconds=60)

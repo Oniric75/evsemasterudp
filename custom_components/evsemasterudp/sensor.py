@@ -33,6 +33,7 @@ async def async_setup_entry(
     base_name = data.get("base_name", f"EVSE {serial}")
     
     # Créer les capteurs
+    client = data["client"]
     entities = [
         EVSEStateSensor(coordinator, serial, base_name),
         EVSEPowerSensor(coordinator, serial, base_name),
@@ -41,6 +42,7 @@ async def async_setup_entry(
         EVSEEnergySensor(coordinator, serial, base_name),
         EVSETemperatureSensor(coordinator, serial, base_name, "inner"),
         EVSETemperatureSensor(coordinator, serial, base_name, "outer"),
+        EVSEChargeStatusSensor(coordinator, serial, base_name, client),
     ]
     
     async_add_entities(entities)
@@ -63,6 +65,33 @@ class EVSEBaseSensor(CoordinatorEntity, SensorEntity):
     def evse_data(self):
         """Obtenir les données de l'EVSE"""
         return self.coordinator.data.get(self.serial, {})
+
+class EVSEChargeStatusSensor(EVSEBaseSensor):
+    """Simple binaire (charging / idle)."""
+
+    def __init__(self, coordinator, serial: str, base_name: str, client):
+        super().__init__(coordinator, serial, base_name)
+        self.client = client
+        self._attr_name = f"{base_name} Charge Statut"
+        self._attr_unique_id = f"{serial}_charge_status"
+        self._attr_icon = "mdi:ev-station"
+
+    @property
+    def native_value(self):
+        data = self.evse_data
+        if not data:
+            return None
+        # Déterminer si en charge à partir de la puissance ou de l'état
+        charging = bool(data.get("charging", False) or (data.get("power", 0) or 0) > 10 or data.get("state") == "CHARGING")
+
+        if charging:
+            return "charging"
+
+        # Vérifier protection cooldown
+        remaining = self.client.get_cooldown_remaining(self.serial)
+        if remaining.total_seconds() > 0:
+            return "soft_protection"  # mode protection anti-cycles
+        return "not_charging"
 
 class EVSEStateSensor(EVSEBaseSensor):
     """Capteur d'état de l'EVSE"""
@@ -90,6 +119,8 @@ class EVSEStateSensor(EVSEBaseSensor):
             "logged_in": data.get("logged_in", False),
             "ip": data.get("ip"),
             "last_seen": data.get("last_seen"),
+            # Ajouter info cooldown si actif
+            "cooldown_remaining_s": int(self.client.get_cooldown_remaining(self.serial).total_seconds()),
         }
 
 class EVSEPowerSensor(EVSEBaseSensor):

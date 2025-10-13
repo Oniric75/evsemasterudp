@@ -246,8 +246,13 @@ class EVSEClient:
         _LOGGER.info(f"Protection changements rapides pour {serial}: {minutes} minutes")
     
     def get_fast_change_protection(self, serial: str) -> int:
-        """Obtenir la protection actuelle (en minutes)"""
-        return self._fast_change_protection.get(serial, 5)  # 5 minutes par défaut
+        """Obtenir la protection actuelle (en minutes)
+
+        Défaut ajusté à 1 minute (au lieu de 5) pour permettre une réactivité
+        plus souple tout en évitant les cycles instantanés. L'utilisateur peut
+        toujours augmenter la valeur via l'entité numérique ou désactiver (0).
+        """
+        return self._fast_change_protection.get(serial, 1)  # défaut 1 minute
     
     def _can_start_charge(self, serial: str) -> bool:
         """Vérifier si on peut démarrer la charge (protection anti-usure)"""
@@ -281,6 +286,25 @@ class EVSEClient:
         """Enregistrer un arrêt de charge (pour protéger le prochain démarrage)"""
         self._last_charge_change[serial] = datetime.now()
         _LOGGER.debug(f"Arrêt de charge enregistré pour {serial}")
+
+    # --- Exposition utilitaire pour l'UI / capteurs ---
+    def get_cooldown_remaining(self, serial: str) -> timedelta:
+        """Retourner le temps restant avant qu'un nouveau démarrage soit autorisé.
+
+        Retourne 0 si aucune protection active ou si délai déjà écoulé.
+        """
+        protection_minutes = self.get_fast_change_protection(serial)
+        if protection_minutes == 0:
+            return timedelta(0)
+        last_change = self._last_charge_change.get(serial)
+        if not last_change:
+            return timedelta(0)
+        min_interval = timedelta(minutes=protection_minutes)
+        elapsed = datetime.now() - last_change
+        remaining = min_interval - elapsed
+        if remaining.total_seconds() < 0:
+            return timedelta(0)
+        return remaining
 
 # Singleton pour partager l'instance entre les composants HA
 _client_instance: Optional[EVSEClient] = None

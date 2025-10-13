@@ -93,9 +93,11 @@ class EVSEFastChangeProtection(CoordinatorEntity, NumberEntity):
         self._attr_native_step = 1
         self._attr_native_unit_of_measurement = UnitOfTime.MINUTES
         self._attr_device_class = None
-        
+
         # Stocker la valeur localement (pas liée aux données EVSE)
-        self._protection_minutes = 5  # Valeur par défaut : 5 minutes
+        # Valeur par défaut ajustée: 1 minute (au lieu de 5) pour répondre
+        # à la demande de réduction du cooldown tout en évitant le spam.
+        self._protection_minutes = 1  # Défaut: 1 minute
     
     @property
     def evse_data(self) -> dict:

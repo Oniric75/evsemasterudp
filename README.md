@@ -121,14 +121,20 @@
 - `sensor.evse_<serial> Énergie` – **EN:** Cumulative delivered energy (kWh). **FR :** Énergie cumulée (kWh).
 - `sensor.evse_<serial> Température Inner/Outer` – **EN:** Internal / external temp (°C). **FR :** Température interne / externe (°C).
 
-### Switches / Interrupteurs
-- `switch.evse_<serial> Charge` – **EN:** Starts or stops charging. **FR :** Démarre ou arrête la charge.
+### Buttons / Boutons
+- `button.<base> Démarrer Charge` – **EN:** Explicit start command. **FR :** Commande explicite de démarrage.
+- `button.<base> Arrêter Charge` – **EN:** Explicit stop command. **FR :** Commande explicite d'arrêt.
+
+### Charge Status Sensor / Capteur Statut Charge
+ `sensor.<base> Charge Statut` – **EN:** Text status: `charging` / `soft_protection` / `not_charging`. **FR :** Statut texte : `charging` / `soft_protection` / `not_charging`.
+  - `soft_protection`: EN: a recent stop prevents immediate restart (cooldown active). FR: un arrêt récent empêche un redémarrage immédiat (protection active).
+  - Attribute `cooldown_remaining_s`: seconds remaining before a new start is allowed.
 
 ### Numbers / Nombres
-- `number.evse_<serial> Courant Max` – **EN:** Sets max allowable current (6–32A). **FR :** Définit le courant maximal (6–32A).
+ Rapid change protection (default ≥1 min between stop and next start; configurable, can disable with 0)
 - `number.evse_<serial> Protection Changements Rapides` – **EN:** Local delay (minutes) between successive start/stop operations to protect hardware. **FR :** Délai local (minutes) entre opérations start/stop pour protéger le matériel.
 
-## 🛠️ Features / Fonctionnalités
+ Protection changements rapides (défaut ≥1 min entre arrêt et prochain démarrage; configurable, désactivable avec 0)
 
 - Auto discovery / Découverte automatique
 - Secure password auth / Authentification sécurisée
@@ -158,8 +164,9 @@ automation:
         entity_id: binary_sensor.vehicle_connected
         state: "on"
     action:
-      - service: switch.turn_on
-        entity_id: switch.evse_charging
+      - service: button.press
+        target:
+          entity_id: button.evsemaster_demarrer_charge
 ```
 
 ### EN: Stop at 80% / FR : Arrêt à 80%
@@ -171,8 +178,9 @@ automation:
         entity_id: sensor.vehicle_battery_level
         above: 80
     action:
-      - service: switch.turn_off
-        entity_id: switch.evse_charging
+      - service: button.press
+        target:
+          entity_id: button.evsemaster_arreter_charge
 ```
 
 ## 🐛 Troubleshooting / Résolution de problèmes
@@ -207,7 +215,7 @@ evsemasterudp/
 ├── config_flow.py       # Configuration interface / Interface de config
 ├── evse_client.py       # Main EVSE client / Client principal EVSE
 ├── sensor.py           # Sensors / Capteurs
-├── switch.py           # Switches / Interrupteurs
+├── button.py           # Start/Stop buttons / Boutons démarrer/arrêter
 ├── number.py           # Number controls / Contrôles numériques
 ├── protocol/           # Protocol implementation / Implémentation protocole
 │   ├── __init__.py
