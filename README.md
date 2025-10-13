@@ -92,17 +92,41 @@
 
 ## ⚙️ Configuration
 
-**EN:** Add Integration → EVSE Master UDP → discovery, serial, password, update interval.
+**EN:** During setup you only provide: (1) the EVSE serial number and (2) the password you configured in the official mobile app (plus optional port, default 28376, and name). There is currently no user‑exposed setting for update interval or network timeout; the integration internally refreshes every 60 seconds. Fast‑change protection delay is managed by the numeric entity (see Entities section) rather than in the config flow.
 
-**FR :** Ajouter une intégration → EVSE Master UDP → découverte, numéro de série, mot de passe, intervalle.
+**FR :** Lors de la configuration vous fournissez uniquement : (1) le numéro de série de la borne et (2) le mot de passe défini dans l'application officielle (ainsi que le port optionnel, défaut 28376, et un nom). Il n'existe pas pour l'instant de paramètre utilisateur pour l'intervalle de mise à jour ou le timeout réseau ; l'intégration effectue un rafraîchissement interne toutes les 60 secondes. Le délai de protection contre les changements rapides est géré par l'entité numérique (voir section Entités) et non dans le flux de configuration.
+
+**EN – Fields:**
+- Serial: Used to locate and authenticate the charger.
+- Password: Required for login (plain text in config entry storage).
+- Port: UDP port (keep default unless your device differs).
+- Name: Friendly label for entities.
+
+**FR – Champs :**
+- Numéro de série : Sert à localiser et authentifier la borne.
+- Mot de passe : Requis pour la connexion (stocké en clair dans l'entrée HA).
+- Port : Port UDP (laisser la valeur par défaut sauf cas particulier).
+- Nom : Libellé convivial pour les entités.
 
 ## 📊 Entities / Entités
 
-**Sensors / Capteurs**: status, power, current, voltage, temperature, session_energy, total_energy.
+**EN:** Entities currently implemented (code) are limited to core operational metrics and two number controls. Some earlier documentation placeholders (offline charge, fees) are not yet implemented in this Python port.  
+**FR :** Les entités effectivement implémentées (code) se limitent aux métriques principales et à deux contrôles numériques. Certaines entités envisagées (mode hors ligne, tarifs) ne sont pas encore implémentées dans ce port Python.
 
-**Switches / Interrupteurs**: charging, offline_charge.
+### Sensors / Capteurs
+- `sensor.evse_<serial> État` – **EN:** Meta state (idle/plugged_in/charging/error/offline). **FR :** État simplifié.
+- `sensor.evse_<serial> Puissance` – **EN:** Current power (W). **FR :** Puissance instantanée (W).
+- `sensor.evse_<serial> Courant` – **EN:** Current on phase L1 (A). **FR :** Courant phase L1 (A).
+- `sensor.evse_<serial> Tension` – **EN:** Voltage L1 (V). **FR :** Tension L1 (V).
+- `sensor.evse_<serial> Énergie` – **EN:** Cumulative delivered energy (kWh). **FR :** Énergie cumulée (kWh).
+- `sensor.evse_<serial> Température Inner/Outer` – **EN:** Internal / external temp (°C). **FR :** Température interne / externe (°C).
 
-**Numbers / Nombres**: max_current, charge_fee, service_fee.
+### Switches / Interrupteurs
+- `switch.evse_<serial> Charge` – **EN:** Starts or stops charging. **FR :** Démarre ou arrête la charge.
+
+### Numbers / Nombres
+- `number.evse_<serial> Courant Max` – **EN:** Sets max allowable current (6–32A). **FR :** Définit le courant maximal (6–32A).
+- `number.evse_<serial> Protection Changements Rapides` – **EN:** Local delay (minutes) between successive start/stop operations to protect hardware. **FR :** Délai local (minutes) entre opérations start/stop pour protéger le matériel.
 
 ## 🛠️ Features / Fonctionnalités
 
