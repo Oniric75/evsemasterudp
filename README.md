@@ -40,7 +40,7 @@
   - [HACS](#hacs)
   - [Manual / Manuelle](#manual--manuelle)
 - [⚙️ Configuration](#️-configuration)
-- [📊 Entities / Entités](#-entities--entités)
+ - [📊 Device Overview / Vue Appareil](#-device-overview--vue-appareil)
 - [🛠️ Features / Fonctionnalités](#️-features--fonctionnalités)
 - [🔧 Advanced Configuration / Configuration Avancée](#-advanced-configuration--configuration-avancée)
 - [� Automation Examples / Exemples d'automatisations](#-automation-examples--exemples-dautomatisations)
@@ -108,33 +108,28 @@
 - Port : Port UDP (laisser la valeur par défaut sauf cas particulier).
 - Nom : Libellé convivial pour les entités (défaut: EVSEMaster).
 
-## 📊 Entities / Entités
+## 📊 Device Overview / Vue Appareil
 
-**EN:** Entities currently implemented (code) are limited to core operational metrics and two number controls. Some earlier documentation placeholders (offline charge, fees) are not yet implemented in this Python port.  
-**FR :** Les entités effectivement implémentées (code) se limitent aux métriques principales et à deux contrôles numériques. Certaines entités envisagées (mode hors ligne, tarifs) ne sont pas encore implémentées dans ce port Python.
+<p align="center">
+  <img src="img/ha_device_panel.png" alt="Home Assistant device view of EVSE Master UDP integration" width="780" />
+</p>
 
-### Sensors / Capteurs
-- `sensor.evse_<serial> État` – **EN:** Meta state (idle/plugged_in/charging/error/offline). **FR :** État simplifié.
-- `sensor.evse_<serial> Puissance` – **EN:** Current power (W). **FR :** Puissance instantanée (W).
-- `sensor.evse_<serial> Courant` – **EN:** Current on phase L1 (A). **FR :** Courant phase L1 (A).
-- `sensor.evse_<serial> Tension` – **EN:** Voltage L1 (V). **FR :** Tension L1 (V).
-- `sensor.evse_<serial> Énergie` – **EN:** Cumulative delivered energy (kWh). **FR :** Énergie cumulée (kWh).
-- `sensor.evse_<serial> Température Inner/Outer` – **EN:** Internal / external temp (°C). **FR :** Température interne / externe (°C).
+**EN:** Example of the device page in Home Assistant showing key sensors, charge control buttons, and the charge status with cooldown indicator.
 
-### Buttons / Boutons
-- `button.<base> Démarrer Charge` – **EN:** Explicit start command. **FR :** Commande explicite de démarrage.
-- `button.<base> Arrêter Charge` – **EN:** Explicit stop command. **FR :** Commande explicite d'arrêt.
+**FR :** Exemple de la page appareil dans Home Assistant affichant les capteurs principaux, les boutons de contrôle de charge et le statut de charge avec indicateur de protection.
 
-### Charge Status Sensor / Capteur Statut Charge
- `sensor.<base> Charge Statut` – **EN:** Text status: `charging` / `soft_protection` / `not_charging`. **FR :** Statut texte : `charging` / `soft_protection` / `not_charging`.
-  - `soft_protection`: EN: a recent stop prevents immediate restart (cooldown active). FR: un arrêt récent empêche un redémarrage immédiat (protection active).
-  - Attribute `cooldown_remaining_s`: seconds remaining before a new start is allowed.
+> The exact entity names may vary depending on the friendly name you chose during setup. / Les noms d'entités peuvent varier selon le nom choisi lors de la configuration.
 
-### Numbers / Nombres
- Rapid change protection (default ≥1 min between stop and next start; configurable, can disable with 0)
-- `number.evse_<serial> Protection Changements Rapides` – **EN:** Local delay (minutes) between successive start/stop operations to protect hardware. **FR :** Délai local (minutes) entre opérations start/stop pour protéger le matériel.
+### Implemented Entities (Summary) / Entités Implémentées (Résumé)
+- State, power, current, voltage, energy, temperatures
+- Charge status (with soft protection + cooldown_remaining_s)
+- Start / Stop charge buttons
+- Rapid change protection number (minutes)
 
- Protection changements rapides (défaut ≥1 min entre arrêt et prochain démarrage; configurable, désactivable avec 0)
+### À venir / Planned
+- Additional configuration parameters (offline charge, fees) – not yet ported.
+
+---
 
 - Auto discovery / Découverte automatique
 - Secure password auth / Authentification sécurisée
