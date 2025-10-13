@@ -149,7 +149,11 @@ class EVSE:
             return "ERROR"
         if self.state.output_state == 1:  # CHARGING
             return "CHARGING"
-        if self.state.gun_state != 0:  # Not DISCONNECTED
+
+        # Align with TypeScript reference mapping:
+        # 0 = unknown, 1 = disconnected, 2 = connected (unlocked), 3 = negotiating?, 4 = connected locked.
+        gun_state = getattr(self.state, "gun_state", 0)
+        if gun_state in (2, 3, 4):
             return "PLUGGED_IN"
         return "IDLE"
     
