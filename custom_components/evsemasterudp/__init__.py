@@ -107,6 +107,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "client": client,
         "serial": serial,
         "password": password,
+        # Friendly base name for entity display
+        "base_name": entry.data.get("name") or "EVSEMaster",
     }
     
     # Configurer les plateformes (sensor, switch, number)

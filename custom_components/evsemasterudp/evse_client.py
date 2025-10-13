@@ -81,7 +81,7 @@ class EVSEClient:
             'phases': evse.info.phases,
             
             # Configuration
-            'name': evse.config.name,
+            'name': evse.config.name or 'EVSEMaster',
             'configured_max_electricity': evse.config.max_electricity,
             'temperature_unit': evse.config.temperature_unit,
         }

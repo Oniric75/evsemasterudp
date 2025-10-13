@@ -21,11 +21,12 @@ async def async_setup_entry(
     coordinator = data["coordinator"]
     client = data["client"]
     serial = data["serial"]
+    base_name = data.get("base_name", f"EVSE {serial}")
     
     # Créer les contrôles numériques
     entities = [
-        EVSECurrentControl(coordinator, client, serial),
-        EVSEFastChangeProtection(coordinator, client, serial),
+        EVSECurrentControl(coordinator, client, serial, base_name),
+        EVSEFastChangeProtection(coordinator, client, serial, base_name),
     ]
     
     async_add_entities(entities)
@@ -33,11 +34,11 @@ async def async_setup_entry(
 class EVSECurrentControl(CoordinatorEntity, NumberEntity):
     """Contrôle du courant maximum de l'EVSE"""
     
-    def __init__(self, coordinator, client, serial: str):
+    def __init__(self, coordinator, client, serial: str, base_name: str):
         super().__init__(coordinator)
         self.client = client
         self.serial = serial
-        self._attr_name = f"EVSE {serial} Courant Max"
+        self._attr_name = f"{base_name} Courant Max"
         self._attr_unique_id = f"{serial}_max_current"
         self._attr_icon = "mdi:current-ac"
         self._attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
@@ -47,7 +48,7 @@ class EVSECurrentControl(CoordinatorEntity, NumberEntity):
         
         self._attr_device_info = {
             "identifiers": {(DOMAIN, serial)},
-            "name": f"EVSE {serial}",
+            "name": base_name,
             "manufacturer": "Oniric75",
             "model": "EVSE Master UDP",
         }
@@ -79,12 +80,12 @@ class EVSECurrentControl(CoordinatorEntity, NumberEntity):
 class EVSEFastChangeProtection(CoordinatorEntity, NumberEntity):
     """Contrôle de protection contre les changements rapides"""
     
-    def __init__(self, coordinator, client, serial: str):
+    def __init__(self, coordinator, client, serial: str, base_name: str):
         """Initialiser le contrôle de protection"""
         super().__init__(coordinator)
         self.client = client
         self.serial = serial
-        self._attr_name = f"EVSE {serial} Protection Changements Rapides"
+        self._attr_name = f"{base_name} Protection Changements Rapides"
         self._attr_unique_id = f"{serial}_fast_change_protection"
         self._attr_icon = "mdi:shield-alert"
         self._attr_native_min_value = 0

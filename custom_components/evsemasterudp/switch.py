@@ -22,10 +22,11 @@ async def async_setup_entry(
     coordinator = data["coordinator"]
     client = data["client"]
     serial = data["serial"]
+    base_name = data.get("base_name", f"EVSE {serial}")
     
     # Créer l'interrupteur de charge
     entities = [
-        EVSEChargingSwitch(coordinator, client, serial),
+        EVSEChargingSwitch(coordinator, client, serial, base_name),
     ]
     
     async_add_entities(entities)
@@ -33,17 +34,17 @@ async def async_setup_entry(
 class EVSEChargingSwitch(CoordinatorEntity, SwitchEntity):
     """Interrupteur pour démarrer/arrêter la charge"""
     
-    def __init__(self, coordinator, client, serial: str):
+    def __init__(self, coordinator, client, serial: str, base_name: str):
         super().__init__(coordinator)
         self.client = client
         self.serial = serial
-        self._attr_name = f"EVSE {serial} Charge"
+        self._attr_name = f"{base_name} Charge"
         self._attr_unique_id = f"{serial}_charging"
         self._attr_icon = "mdi:power"
         
         self._attr_device_info = {
             "identifiers": {(DOMAIN, serial)},
-            "name": f"EVSE {serial}",
+            "name": base_name,
             "manufacturer": "Oniric75",
             "model": "EVSE Master UDP",
         }

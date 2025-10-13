@@ -22,7 +22,8 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required("serial"): str,
         vol.Required("password"): str,
         vol.Optional("port", default=28376): int,
-        vol.Optional("name", default="EVSE"): str,
+    # Default friendly base name (avoids huge serial in entity names)
+    vol.Optional("name", default="EVSEMaster"): str,
     }
 )
 

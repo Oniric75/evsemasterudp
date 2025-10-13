@@ -106,7 +106,7 @@
 - Numéro de série : Sert à localiser et authentifier la borne.
 - Mot de passe : Requis pour la connexion (stocké en clair dans l'entrée HA).
 - Port : Port UDP (laisser la valeur par défaut sauf cas particulier).
-- Nom : Libellé convivial pour les entités.
+- Nom : Libellé convivial pour les entités (défaut: EVSEMaster).
 
 ## 📊 Entities / Entités
 

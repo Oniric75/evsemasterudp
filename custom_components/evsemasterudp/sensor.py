@@ -30,16 +30,17 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
     coordinator = data["coordinator"]
     serial = data["serial"]
+    base_name = data.get("base_name", f"EVSE {serial}")
     
     # Créer les capteurs
     entities = [
-        EVSEStateSensor(coordinator, serial),
-        EVSEPowerSensor(coordinator, serial),
-        EVSECurrentSensor(coordinator, serial),
-        EVSEVoltageSensor(coordinator, serial),
-        EVSEEnergySensor(coordinator, serial),
-        EVSETemperatureSensor(coordinator, serial, "inner"),
-        EVSETemperatureSensor(coordinator, serial, "outer"),
+        EVSEStateSensor(coordinator, serial, base_name),
+        EVSEPowerSensor(coordinator, serial, base_name),
+        EVSECurrentSensor(coordinator, serial, base_name),
+        EVSEVoltageSensor(coordinator, serial, base_name),
+        EVSEEnergySensor(coordinator, serial, base_name),
+        EVSETemperatureSensor(coordinator, serial, base_name, "inner"),
+        EVSETemperatureSensor(coordinator, serial, base_name, "outer"),
     ]
     
     async_add_entities(entities)
@@ -47,12 +48,13 @@ async def async_setup_entry(
 class EVSEBaseSensor(CoordinatorEntity, SensorEntity):
     """Capteur de base pour EVSE"""
     
-    def __init__(self, coordinator, serial: str):
+    def __init__(self, coordinator, serial: str, base_name: str):
         super().__init__(coordinator)
         self.serial = serial
+        self.base_name = base_name
         self._attr_device_info = {
             "identifiers": {(DOMAIN, serial)},
-            "name": f"EVSE {serial}",
+            "name": base_name,
             "manufacturer": "Oniric75",
             "model": "EVSE Master UDP",
         }
@@ -65,9 +67,9 @@ class EVSEBaseSensor(CoordinatorEntity, SensorEntity):
 class EVSEStateSensor(EVSEBaseSensor):
     """Capteur d'état de l'EVSE"""
     
-    def __init__(self, coordinator, serial: str):
-        super().__init__(coordinator, serial)
-        self._attr_name = f"EVSE {serial} État"
+    def __init__(self, coordinator, serial: str, base_name: str):
+        super().__init__(coordinator, serial, base_name)
+        self._attr_name = f"{base_name} État"
         self._attr_unique_id = f"{serial}_state"
         self._attr_icon = "mdi:ev-station"
     
@@ -93,9 +95,9 @@ class EVSEStateSensor(EVSEBaseSensor):
 class EVSEPowerSensor(EVSEBaseSensor):
     """Capteur de puissance de l'EVSE"""
     
-    def __init__(self, coordinator, serial: str):
-        super().__init__(coordinator, serial)
-        self._attr_name = f"EVSE {serial} Puissance"
+    def __init__(self, coordinator, serial: str, base_name: str):
+        super().__init__(coordinator, serial, base_name)
+        self._attr_name = f"{base_name} Puissance"
         self._attr_unique_id = f"{serial}_power"
         self._attr_device_class = SensorDeviceClass.POWER
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -111,9 +113,9 @@ class EVSEPowerSensor(EVSEBaseSensor):
 class EVSECurrentSensor(EVSEBaseSensor):
     """Capteur de courant de l'EVSE"""
     
-    def __init__(self, coordinator, serial: str):
-        super().__init__(coordinator, serial)
-        self._attr_name = f"EVSE {serial} Courant"
+    def __init__(self, coordinator, serial: str, base_name: str):
+        super().__init__(coordinator, serial, base_name)
+        self._attr_name = f"{base_name} Courant"
         self._attr_unique_id = f"{serial}_current"
         self._attr_device_class = SensorDeviceClass.CURRENT
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -129,9 +131,9 @@ class EVSECurrentSensor(EVSEBaseSensor):
 class EVSEVoltageSensor(EVSEBaseSensor):
     """Capteur de tension de l'EVSE"""
     
-    def __init__(self, coordinator, serial: str):
-        super().__init__(coordinator, serial)
-        self._attr_name = f"EVSE {serial} Tension"
+    def __init__(self, coordinator, serial: str, base_name: str):
+        super().__init__(coordinator, serial, base_name)
+        self._attr_name = f"{base_name} Tension"
         self._attr_unique_id = f"{serial}_voltage"
         self._attr_device_class = SensorDeviceClass.VOLTAGE
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -147,9 +149,9 @@ class EVSEVoltageSensor(EVSEBaseSensor):
 class EVSEEnergySensor(EVSEBaseSensor):
     """Capteur d'énergie de l'EVSE"""
     
-    def __init__(self, coordinator, serial: str):
-        super().__init__(coordinator, serial)
-        self._attr_name = f"EVSE {serial} Énergie"
+    def __init__(self, coordinator, serial: str, base_name: str):
+        super().__init__(coordinator, serial, base_name)
+        self._attr_name = f"{base_name} Énergie"
         self._attr_unique_id = f"{serial}_energy"
         self._attr_device_class = SensorDeviceClass.ENERGY
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
@@ -165,10 +167,10 @@ class EVSEEnergySensor(EVSEBaseSensor):
 class EVSETemperatureSensor(EVSEBaseSensor):
     """Capteur de température de l'EVSE"""
     
-    def __init__(self, coordinator, serial: str, temp_type: str):
-        super().__init__(coordinator, serial)
+    def __init__(self, coordinator, serial: str, base_name: str, temp_type: str):
+        super().__init__(coordinator, serial, base_name)
         self.temp_type = temp_type
-        self._attr_name = f"EVSE {serial} Température {temp_type.title()}"
+        self._attr_name = f"{base_name} Température {temp_type.title()}"
         self._attr_unique_id = f"{serial}_temperature_{temp_type}"
         self._attr_device_class = SensorDeviceClass.TEMPERATURE
         self._attr_state_class = SensorStateClass.MEASUREMENT
