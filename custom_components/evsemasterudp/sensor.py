@@ -93,6 +93,13 @@ class EVSEChargeStatusSensor(EVSEBaseSensor):
             return "soft_protection"  # mode protection anti-cycles
         return "not_charging"
 
+    @property
+    def extra_state_attributes(self):
+        remaining = self.client.get_cooldown_remaining(self.serial)
+        return {
+            "cooldown_remaining_s": int(remaining.total_seconds()),
+        }
+
 class EVSEStateSensor(EVSEBaseSensor):
     """Capteur d'état de l'EVSE"""
     
@@ -119,8 +126,6 @@ class EVSEStateSensor(EVSEBaseSensor):
             "logged_in": data.get("logged_in", False),
             "ip": data.get("ip"),
             "last_seen": data.get("last_seen"),
-            # Ajouter info cooldown si actif
-            "cooldown_remaining_s": int(self.client.get_cooldown_remaining(self.serial).total_seconds()),
         }
 
 class EVSEPowerSensor(EVSEBaseSensor):
