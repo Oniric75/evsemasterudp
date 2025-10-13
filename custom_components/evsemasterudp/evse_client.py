@@ -194,12 +194,8 @@ class EVSEClient:
                 max_amps = evse.info.max_electricity if evse.info.max_electricity > 0 else 32
                 amps = min(max_amps, 16)
         
-        # Le démarrage est autorisé, pas besoin d'enregistrer (seuls les arrêts sont enregistrés)
-        started = await evse.charge_start(amps, single_phase)
-        if started:
-            # Enregistrer également un changement pour éviter Start->Start spam
-            self._record_charge_state_change(serial)
-        return started
+        # Le démarrage ne déclenche plus de cooldown (seuls les arrêts depuis un état CHARGING le font)
+        return await evse.charge_start(amps, single_phase)
     
     async def stop_charging(self, serial: str) -> bool:
         """Arrêter la charge"""
@@ -208,11 +204,11 @@ class EVSEClient:
             _LOGGER.error(f"EVSE {serial} non trouvée")
             return False
         
-        # Toujours autoriser l'arrêt (sécurité) mais enregistrer pour protection future
+        # Toujours autoriser l'arrêt (sécurité)
+        was_charging = evse.get_meta_state() == "CHARGING"
         result = await evse.charge_stop()
-        
-        # Enregistrer l'arrêt pour protéger le prochain démarrage
-        if result:
+        # Enregistrer l'arrêt uniquement si on était réellement en charge
+        if result and was_charging:
             self._record_charge_state_change(serial)
             
         return result
