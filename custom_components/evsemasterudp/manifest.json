@@ -9,6 +9,6 @@
   "integration_type": "hub",
   "iot_class": "local_polling",
   "requirements": [],
-  "version": "2.0.6",
+  "version": "2.0.7",
   "after_dependencies": []
 }

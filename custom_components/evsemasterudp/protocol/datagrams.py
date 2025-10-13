@@ -187,7 +187,7 @@ class LoginConfirm(Datagram):
     COMMAND = 32769
     
     def pack_payload(self) -> bytes:
-        return b''
+        return b'\x00'  # Un byte 0x00 selon TypeScript
     
     def unpack_payload(self, buffer: bytes) -> None:
         pass
