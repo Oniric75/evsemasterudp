@@ -130,8 +130,8 @@ class EVSE:
     
     def is_online(self) -> bool:
         """Vérifier si l'EVSE est en ligne"""
-        # Considérer offline après 30 secondes sans message
-        return (datetime.now() - self.last_seen).total_seconds() < 30
+        # Considérer offline après 90 secondes (ajusté pour intervalle de poll 60s)
+        return (datetime.now() - self.last_seen).total_seconds() < 90
     
     def is_logged_in(self) -> bool:
         """Vérifier si on est connecté à l'EVSE"""

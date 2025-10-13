@@ -81,8 +81,13 @@ class EVSEChargeStatusSensor(EVSEBaseSensor):
         data = self.evse_data
         if not data:
             return None
-        # Déterminer si en charge à partir de la puissance ou de l'état
-        charging = bool(data.get("charging", False) or (data.get("power", 0) or 0) > 10 or data.get("state") == "CHARGING")
+        # Déterminer si en charge : meta-state CHARGING ou output_state==1 ou puissance significative
+        current_power = data.get("current_power", 0) or 0
+        charging = bool(
+            data.get("state") == "CHARGING" or
+            data.get("output_state") == 1 or
+            current_power > 10
+        )
 
         if charging:
             return "charging"

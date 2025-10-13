@@ -195,7 +195,11 @@ class EVSEClient:
                 amps = min(max_amps, 16)
         
         # Le démarrage est autorisé, pas besoin d'enregistrer (seuls les arrêts sont enregistrés)
-        return await evse.charge_start(amps, single_phase)
+        started = await evse.charge_start(amps, single_phase)
+        if started:
+            # Enregistrer également un changement pour éviter Start->Start spam
+            self._record_charge_state_change(serial)
+        return started
     
     async def stop_charging(self, serial: str) -> bool:
         """Arrêter la charge"""
