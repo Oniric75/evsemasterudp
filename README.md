@@ -8,125 +8,127 @@
 
 ---
 
-> **🌐 This README is available in two languages / Ce README est disponible en deux langues :**
-> - [🇺🇸 **English Version**](#-english-version) (below / ci-dessous)
-> - [🇫🇷 **Version Française**](#-version-française) (scroll down / plus bas)
+> **🚨 DISCLAIMER / AVERTISSEMENT LÉGAL**
+> 
+> **English:** This integration is provided "as is". Installing, configuring, or using it is entirely at your own risk. The author(s) accept no liability for any damage, malfunction, warranty loss, fire, injury, or other consequences resulting from its use. Always confirm that your charging station operates safely and complies with local regulations before use.
+> 
+> **Français :** Cette intégration est fournie "en l'état". Son installation, sa configuration ou son utilisation se font entièrement à vos risques et périls. L'auteur(e) décline toute responsabilité en cas de dommages, dysfonctionnements, perte de garantie, incendie, blessure ou toute autre conséquence liée à son utilisation. Vérifiez toujours que votre borne fonctionne en toute sécurité et respecte la réglementation locale avant usage.
+
+---
+
+> **⚠️ SAFETY WARNINGS / AVERTISSEMENTS IMPORTANTS**
+> 
+> **English:**
+> - Repeated charge starts can prematurely wear your station's contactors; even with safeguards enabled, you assume full responsibility for any damage.
+> - Never run the "EVSE Master" mobile app at the same time as this integration; simultaneous use will cause connection conflicts and may crash both systems.
+> 
+> **Français :**
+> - Les démarrages répétés de charge peuvent user prématurément les contacteurs de la borne ; même avec les protections activées, vous assumez l'entière responsabilité des dommages éventuels.
+> - N'utilisez jamais l'application mobile « EVSE Master » en parallèle de cette intégration ; l'utilisation simultanée provoque des conflits de connexion et peut faire planter les deux systèmes.
+
+---
+
+> **🗂️ Unified bilingual sections below / Sections bilingues unifiées ci-dessous.**
 
 ---
 
 ## 📋 Table of Contents / Table des Matières
-- [🇺🇸 English Version](#-english-version)
-- [🇫🇷 Version Française](#-version-française)
+- [🔌 Overview / Vue d'ensemble](#-overview--vue-densemble)
+- [⚠️ Important Warnings / Avertissements](#️-important-warnings--avertissements)
+- [🏗️ Compatibility / Compatibilité](#️-compatibility--compatibilité)
+- [🚀 Installation](#-installation)
+  - [HACS](#hacs)
+  - [Manual / Manuelle](#manual--manuelle)
+- [⚙️ Configuration](#️-configuration)
+- [📊 Entities / Entités](#-entities--entités)
+- [🛠️ Features / Fonctionnalités](#️-features--fonctionnalités)
+- [🔧 Advanced Configuration / Configuration Avancée](#-advanced-configuration--configuration-avancée)
+- [� Automation Examples / Exemples d'automatisations](#-automation-examples--exemples-dautomatisations)
+- [🐛 Troubleshooting / Résolution de problèmes](#-troubleshooting--résolution-de-problèmes)
+- [🆘 Support](#-support)
+- [📄 License / Licence](#-license--licence)
 
 ---
 
-# 🇺🇸 English Version
+## 🔌 Overview / Vue d'ensemble
 
-🔌 **Home Assistant Integration for EVSE Master UDP compatible charging stations**
+**EN:** Home Assistant integration for EVSE Master UDP compatible charging stations. Control & monitor your EVSE via the UDP protocol used by the mobile app.
 
-This integration allows you to control and monitor your EVSE charging station from Home Assistant via the UDP protocol used by the "EVSE Master" mobile application.
+**FR:** Intégration Home Assistant pour bornes compatibles EVSE Master UDP. Contrôle et supervision via le protocole UDP utilisé par l'application mobile.
 
-## ⚠️ Important Warnings
+## ⚠️ Important Warnings / Avertissements
 
-> **EQUIPMENT PROTECTION**: Repeated charge starts can prematurely wear out your charging station's contactors. This integration includes automatic protections, but **use is at your own risk**.
+**EN – Built‑in protections:**
+- Rapid change protection (≥5 min between start/stop)
+- 16A safety fallback on error
+- Minimum delay between cycles
 
-> **📱 APPLICATION CONFLICT**: **DO NOT use the "EVSE Master" mobile app simultaneously with this integration!** Running both at the same time will cause connection conflicts and crash both systems. If you need to use the mobile app, temporarily disable the Home Assistant integration first.
+**FR – Protections intégrées :**
+- Protection changements rapides (≥5 min entre démarrage/arrêt)
+- Fallback sécurité 16A en cas d'erreur
+- Délai minimum entre cycles
 
-**Built-in protections**:
-- 🛡️ **Rapid change protection**: Prevents too frequent starts/stops (5 min minimum delay)
-- 🔒 **16A safety fallback**: In case of error, automatically limits to 16A
-- ⏱️ **Minimum delay between cycles**: Respects minimum time between operations
+**EN – Recommendations:** Avoid frequent short cycles; plan automations; monitor hardware; disable integration before using the mobile app.
 
-**Recommendations**:
-- Avoid frequent starts/stops (< 5 minutes interval)
-- Plan your automations to avoid rapid cycles
-- Monitor your equipment's health status
-- **Disable the integration before using the mobile app**
+**FR – Recommandations :** Évitez les cycles courts répétés; planifiez vos automatisations; surveillez le matériel; désactivez l'intégration avant d'utiliser l'application mobile.
 
-## 🏗️ Compatibility
+## 🏗️ Compatibility / Compatibilité
 
-**Tested and compatible charging stations**:
-- **Morec** (all stations using the "EVSE Master" app)
-- **Generic EVSE stations** using UDP protocol on port 28376
-- **Chinese stations** configurable via EVSE Master app
+**EN:** Tested: Morec; generic EVSE using UDP 28376; some Chinese stations via EVSE Master.
+
+**FR :** Testé : Morec ; bornes EVSE génériques UDP 28376 ; certaines bornes chinoises via EVSE Master.
 
 ## 🚀 Installation
 
-### Method 1: HACS (Recommended)
+### HACS
+**EN:** This is the recommended method because updates are tracked automatically. In Home Assistant open HACS, go to Integrations, then use the three‑dot menu to open Custom repositories. Paste the repository URL `https://github.com/Oniric75/evsemasterudp` and select type "Integration". After adding it, search for "EVSE Master UDP" inside HACS, click install, then restart Home Assistant to load the component.
 
-1. Open HACS in Home Assistant
-2. Go to "Integrations"
-3. Click the 3 dots in the top right → "Custom repositories"
-4. Add `https://github.com/Oniric75/evsemasterudp` as a repository of type "Integration"
-5. Search for "EVSE Master UDP" in HACS
-6. Install the integration
-7. Restart Home Assistant
+**FR :** Méthode recommandée car les mises à jour sont suivies automatiquement. Dans Home Assistant ouvrez HACS, allez dans Intégrations puis utilisez le menu (trois points) pour ajouter un Dépôt personnalisé. Collez l'URL `https://github.com/Oniric75/evsemasterudp` et choisissez le type « Integration ». Ensuite recherchez « EVSE Master UDP » dans HACS, installez, puis redémarrez Home Assistant pour charger le composant.
 
-### Method 2: Manual Installation
+### Manual / Manuelle
+**EN:** Use this only if you do not use HACS. Download the latest release archive from GitHub, extract it, and copy the folder `evsemasterudp` (the one that contains `manifest.json`) into your Home Assistant `custom_components/` directory. Ensure the final path is `custom_components/evsemasterudp/`. Restart Home Assistant and the integration should appear in the Add Integration dialog.
 
-1. Download the [latest release](https://github.com/Oniric75/evsemasterudp/releases)
-2. Extract the `evsemasterudp` folder to `custom_components/`
-3. Restart Home Assistant
+**FR :** À utiliser seulement si vous n'utilisez pas HACS. Téléchargez l'archive de la dernière release sur GitHub, extrayez‑la puis copiez le dossier `evsemasterudp` (celui contenant `manifest.json`) dans votre répertoire `custom_components/` de Home Assistant. Vérifiez que le chemin final est `custom_components/evsemasterudp/`. Redémarrez Home Assistant et l'intégration apparaîtra dans la boîte de dialogue « Ajouter une intégration ».
 
 ## ⚙️ Configuration
 
-1. Go to **Configuration** → **Integrations**
-2. Click **"Add Integration"**
-3. Search for **"EVSE Master UDP"**
-4. Follow the configuration wizard:
-   - Automatic discovery will detect your charging station
-   - Enter your EVSE station serial number (found on device label)
-   - Enter your EVSE station password (set in EVSE Master app)
-   - Configure update frequency (recommended: 30 seconds)
+**EN:** Add Integration → EVSE Master UDP → discovery, serial, password, update interval.
 
-## 📊 Created Entities
+**FR :** Ajouter une intégration → EVSE Master UDP → découverte, numéro de série, mot de passe, intervalle.
 
-### Sensors
-- `sensor.evse_status` - General station status
-- `sensor.evse_power` - Current power (W)
-- `sensor.evse_current` - Current amperage (A)
-- `sensor.evse_voltage` - Voltage (V)
-- `sensor.evse_temperature` - Station temperature (°C)
-- `sensor.evse_session_energy` - Current session energy (kWh)
-- `sensor.evse_total_energy` - Total energy (kWh)
+## 📊 Entities / Entités
 
-### Switches
-- `switch.evse_charging` - Charging on/off control
-- `switch.evse_offline_charge` - Offline charging mode
+**Sensors / Capteurs**: status, power, current, voltage, temperature, session_energy, total_energy.
 
-### Number Controls
-- `number.evse_max_current` - Maximum current (A)
-- `number.evse_charge_fee` - Charging rate
-- `number.evse_service_fee` - Service fee
+**Switches / Interrupteurs**: charging, offline_charge.
 
-## 🛠️ Features
+**Numbers / Nombres**: max_current, charge_fee, service_fee.
 
-- 🔍 **Automatic discovery** of EVSE stations on local network
-- 🔐 **Secure authentication** with password
-- 📊 **Real-time monitoring** of charging status
-- ⚡ **Charging control** (start/stop)
-- 🔢 **Parameter configuration** (max current, temperature, etc.)
-- 📈 **Charging session history**
-- 🛡️ **Built-in protections** against premature wear
+## 🛠️ Features / Fonctionnalités
 
-## 🔧 Advanced Configuration
+- Auto discovery / Découverte automatique
+- Secure password auth / Authentification sécurisée
+- Real-time status / Statut temps réel
+- Charge control / Contrôle de charge
+- Parameter configuration / Paramètres configurables
+- Session history / Historique de session
+- Protections intégrées
 
-### Available settings in the interface:
-- **Update frequency**: 15-300 seconds (default: 30s)
-- **Connection timeout**: 5-30 seconds (default: 10s)
-- **Rapid change protection**: enabled by default
-- **Minimum delay between cycles**: 5 minutes (configurable)
+## 🔧 Advanced Configuration / Configuration Avancée
 
-## 📚 Automation Examples
+**EN:** Update freq 15–300s (default 30), timeout 5–30s (default 10), rapid change protection on, 5‑min cycle delay.
 
-### Charging start based on electricity rates
+**FR :** Fréquence 15–300s (défaut 30), timeout 5–30s (défaut 10), protection active, délai 5 min.
 
+## 📚 Automation Examples / Exemples d'automatisations
+
+### EN: Off‑peak charging / FR : Charge heures creuses
 ```yaml
 automation:
-  - alias: "EVSE charge during off-peak hours"
+  - alias: "EVSE charge off-peak / heures creuses"
     trigger:
       - platform: time
-        at: "22:30:00"  # Off-peak hours start
+        at: "22:30:00"
     condition:
       - condition: state
         entity_id: binary_sensor.vehicle_connected
@@ -136,11 +138,10 @@ automation:
         entity_id: switch.evse_charging
 ```
 
-### Automatic stop at 80% battery
-
+### EN: Stop at 80% / FR : Arrêt à 80%
 ```yaml
 automation:
-  - alias: "Stop charge at 80%"
+  - alias: "Stop/Arrêt charge 80%"
     trigger:
       - platform: numeric_state
         entity_id: sensor.vehicle_battery_level
@@ -150,191 +151,21 @@ automation:
         entity_id: switch.evse_charging
 ```
 
-## 🐛 Troubleshooting
+## 🐛 Troubleshooting / Résolution de problèmes
 
-### Station not detected
-1. Verify that the station is powered on
-2. Confirm that Home Assistant and the station are on the same network
-3. Check that port 28376 is not blocked by firewall
+**EN:** Not detected → power on, same network, firewall port 28376. Auth failed → check password & serial. Connection lost → network stability, adjust interval, conflicts.
 
-### Authentication failed
-1. Verify the password in the EVSE Master app
-2. Confirm the station serial number
-3. Restart the station if necessary
+**FR :** Non détectée → alimentation, même réseau, port 28376. Auth échouée → mot de passe & numéro de série. Perte connexion → stabilité réseau, intervalle, conflits.
 
-### Connection lost
-1. Check network stability
-2. Increase update frequency in configuration
-3. Verify there are no network conflicts
+## 🆘 Support
 
-## 🆘 Support and Issues
+- Issues / Bugs: https://github.com/Oniric75/evsemasterudp/issues
+- Discussions: https://github.com/Oniric75/evsemasterudp/discussions
+- Wiki: https://github.com/Oniric75/evsemasterudp/wiki
 
-- 📋 [Report a bug](https://github.com/Oniric75/evsemasterudp/issues)
-- 💬 [Discussions](https://github.com/Oniric75/evsemasterudp/discussions)
-- 📖 [Wiki and documentation](https://github.com/Oniric75/evsemasterudp/wiki)
+## 📄 License / Licence
 
-## 📄 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-# 🇫🇷 Version Française
-
-🔌 **Intégration Home Assistant pour bornes de recharge compatibles EVSE Master UDP**
-
-Cette intégration permet de contrôler et surveiller votre borne de recharge EVSE depuis Home Assistant via le protocole UDP utilisé par l'application mobile "EVSE Master".
-
-## ⚠️ Avertissements Importants
-
-> **PROTECTION DE L'ÉQUIPEMENT** : Les démarrages répétés de charge peuvent user prématurément les contacteurs de votre borne. Cette intégration inclut des protections automatiques, mais **l'utilisation reste à vos propres risques**.
-
-> **📱 CONFLIT D'APPLICATION** : **N'utilisez PAS l'application mobile "EVSE Master" en même temps que cette intégration !** L'utilisation simultanée des deux provoque des conflits de connexion et fait planter les deux systèmes. Si vous devez utiliser l'application mobile, désactivez temporairement l'intégration Home Assistant en premier.
-
-**Protections intégrées** :
-- 🛡️ **Protection contre les changements rapides** : Empêche les démarrages/arrêts trop fréquents (délai minimum 5 min)
-- 🔒 **Fallback de sécurité 16A** : En cas d'erreur, limite automatiquement à 16A
-- ⏱️ **Délai minimum entre cycles** : Respecte un temps minimum entre les opérations
-
-**Recommandations** :
-- Évitez les démarrages/arrêts fréquents (< 5 minutes d'intervalle)
-- Planifiez vos automations pour éviter les cycles rapides
-- Surveillez l'état de santé de votre équipement
-- **Désactivez l'intégration avant d'utiliser l'application mobile**
-
-## 🏗️ Compatibilité
-
-**Bornes testées et compatibles** :
-- **Morec** (toutes les bornes utilisant l'app "EVSE Master")
-- **Bornes EVSE génériques** utilisant le protocole UDP sur le port 28376
-- **Bornes chinoises** configurables via l'app EVSE Master
-
-## 🚀 Installation
-
-### Méthode 1 : HACS (Recommandée)
-
-1. Ouvrez HACS dans Home Assistant
-2. Allez dans "Intégrations"
-3. Cliquez sur les 3 points en haut à droite → "Dépôts personnalisés"
-4. Ajoutez `https://github.com/Oniric75/evsemasterudp` comme dépôt de type "Integration"
-5. Recherchez "EVSE Master UDP" dans HACS
-6. Installez l'intégration
-7. Redémarrez Home Assistant
-
-### Méthode 2 : Installation Manuelle
-
-1. Téléchargez la [dernière release](https://github.com/Oniric75/evsemasterudp/releases)
-2. Extrayez le dossier `evsemasterudp` dans `custom_components/`
-3. Redémarrez Home Assistant
-
-## ⚙️ Configuration
-
-1. Allez dans **Configuration** → **Intégrations**
-2. Cliquez sur **"Ajouter une intégration"**
-3. Recherchez **"EVSE Master UDP"**
-4. Suivez l'assistant de configuration :
-   - La découverte automatique détectera votre borne
-   - Entrez le numéro de série de votre borne (trouvé sur l'étiquette de l'appareil)
-   - Entrez le mot de passe de votre borne (défini dans l'app EVSE Master)
-   - Configurez la fréquence de mise à jour (recommandé : 30 secondes)
-
-## 📊 Entités Créées
-
-### Capteurs (Sensors)
-- `sensor.evse_status` - Statut général de la borne
-- `sensor.evse_power` - Puissance actuelle (W)
-- `sensor.evse_current` - Courant actuel (A)
-- `sensor.evse_voltage` - Tension (V)
-- `sensor.evse_temperature` - Température de la borne (°C)
-- `sensor.evse_session_energy` - Énergie de la session en cours (kWh)
-- `sensor.evse_total_energy` - Énergie totale (kWh)
-
-### Interrupteurs (Switches)
-- `switch.evse_charging` - Contrôle marche/arrêt de la charge
-- `switch.evse_offline_charge` - Mode charge hors ligne
-
-### Contrôles Numériques (Numbers)
-- `number.evse_max_current` - Courant maximum (A)
-- `number.evse_charge_fee` - Tarif de charge
-- `number.evse_service_fee` - Frais de service
-
-## 🛠️ Fonctionnalités
-
-- 🔍 **Découverte automatique** des bornes EVSE sur le réseau local
-- 🔐 **Authentification sécurisée** avec mot de passe
-- 📊 **Surveillance en temps réel** du statut de charge
-- ⚡ **Contrôle de la charge** (démarrage/arrêt)
-- 🔢 **Configuration des paramètres** (courant max, température, etc.)
-- 📈 **Historique des sessions** de charge
-- 🛡️ **Protections intégrées** contre l'usure prématurée
-
-## 🔧 Configuration Avancée
-
-### Paramètres disponibles dans l'interface :
-- **Fréquence de mise à jour** : 15-300 secondes (défaut: 30s)
-- **Timeout de connexion** : 5-30 secondes (défaut: 10s)
-- **Protection contre les changements rapides** : activée par défaut
-- **Délai minimum entre cycles** : 5 minutes (configurable)
-
-## 📚 Exemples d'Automatisations
-
-### Démarrage de charge basé sur les tarifs électriques
-
-```yaml
-automation:
-  - alias: "Charge EVSE heures creuses"
-    trigger:
-      - platform: time
-        at: "22:30:00"  # Début heures creuses
-    condition:
-      - condition: state
-        entity_id: binary_sensor.vehicle_connected
-        state: "on"
-    action:
-      - service: switch.turn_on
-        entity_id: switch.evse_charging
-```
-
-### Arrêt automatique à 80% de batterie
-
-```yaml
-automation:
-  - alias: "Arrêt charge 80%"
-    trigger:
-      - platform: numeric_state
-        entity_id: sensor.vehicle_battery_level
-        above: 80
-    action:
-      - service: switch.turn_off
-        entity_id: switch.evse_charging
-```
-
-## 🐛 Résolution de Problèmes
-
-### Borne non détectée
-1. Vérifiez que la borne est allumée
-2. Confirmez que Home Assistant et la borne sont sur le même réseau
-3. Vérifiez que le port 28376 n'est pas bloqué par le pare-feu
-
-### Authentification échouée
-1. Vérifiez le mot de passe dans l'app EVSE Master
-2. Confirmez le numéro de série de la borne
-3. Redémarrez la borne si nécessaire
-
-### Perte de connexion
-1. Vérifiez la stabilité du réseau
-2. Augmentez la fréquence de mise à jour dans la configuration
-3. Vérifiez qu'il n'y a pas de conflits réseau
-
-## 🆘 Support et Problèmes
-
-- 📋 [Signaler un bug](https://github.com/Oniric75/evsemasterudp/issues)
-- 💬 [Discussions](https://github.com/Oniric75/evsemasterudp/discussions)
-- 📖 [Wiki et documentation](https://github.com/Oniric75/evsemasterudp/wiki)
-
-## 📄 Licence
-
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+MIT License – see `LICENSE`.
 
 ---
 
@@ -371,6 +202,59 @@ evsemasterudp/
 - **Communication** : Bidirectional UDP / UDP bidirectionnel
 - **Authentication / Authentification** : Plain text password / Mot de passe texte
 - **Discovery / Découverte** : Automatic broadcast / Broadcast automatique
+
+#### Sequence Overview / Vue séquentielle
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant HA as Home Assistant
+  participant Client as EVSEClient<br/>(evse_client.py)
+  participant Comm as Communicator.EVSE
+  participant EVSE as Charging Station
+
+  Note over HA,EVSE: Discovery & login / Découverte et connexion
+  HA->>Client: Trigger discovery
+  Client->>Comm: send(Login)
+  Comm->>EVSE: Datagram 0x0001 Login
+  EVSE-->>Comm: Datagram 0x0002 LoginResponse
+  Comm-->>Client: Station metadata
+
+  Client->>Comm: RequestLogin
+  Comm->>EVSE: Datagram 0x8002 RequestLogin
+  EVSE-->>Comm: PasswordErrorResponse?
+  alt Password ok / Mot de passe ok
+    Client->>Comm: LoginConfirm
+    Comm->>EVSE: Datagram 0x8001 LoginConfirm
+  else Password ko / Mot de passe refusé
+    Comm-->>Client: raise PasswordError
+  end
+
+  Note over HA,EVSE: Session heartbeat / Maintien de session
+  loop Keep alive
+    Client->>Comm: Heading
+    Comm->>EVSE: Datagram 0x0003 Heading
+    EVSE-->>Comm: Datagram 0x8003 HeadingResponse
+  end
+
+  Note over HA,EVSE: Status polling / Lecture statut
+  Client->>Comm: Request status
+  Comm->>EVSE: Datagram 0x8004 Ack status
+  EVSE-->>Comm: Datagram 0x0004 SingleACStatus
+  Comm-->>Client: Update EVSEState
+  Client-->>HA: Update entities
+
+  Note over HA,EVSE: Charge control / Commandes de charge
+  HA->>Client: Start charge
+  Client->>Comm: ChargeStart
+  Comm->>EVSE: Datagram 0x8007 ChargeStart
+  EVSE-->>Comm: Datagram 0x0007 ChargeStartResponse
+
+  HA->>Client: Stop charge
+  Client->>Comm: ChargeStop
+  Comm->>EVSE: Datagram 0x8008 ChargeStop
+  EVSE-->>Comm: Ack / Next status
+```
 
 ### Development Testing / Tests de Développement
 
