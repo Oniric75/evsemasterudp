@@ -59,9 +59,9 @@ class EVSECurrentControl(CoordinatorEntity, NumberEntity):
     
     @property
     def native_value(self) -> float | None:
-        """Retourner la valeur actuelle du courant maximum"""
+        """Retourner la valeur actuelle du courant maximum configuré"""
         data = self.evse_data
-        return data.get("max_electricity", 6)
+        return data.get("configured_max_electricity", 6)
     
     @property
     def available(self) -> bool:

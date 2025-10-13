@@ -296,26 +296,38 @@ class EVSE:
     async def set_max_electricity(self, amps: int) -> bool:
         """Définir le courant maximum"""
         if not self.is_logged_in():
-            raise RuntimeError("Non connecté à l'EVSE")
+            _LOGGER.error(f"EVSE {self.info.serial} non connectée")
+            return False
         
         try:
+            _LOGGER.info(f"Définition courant max à {amps}A pour {self.info.serial}")
+            
             set_current = SetAndGetOutputElectricity()
             set_current.set_device_serial(self.info.serial)
             set_current.set_device_password(self.password)
             set_current.action = 1  # SET action
-            set_current.electricity = amps  # Correct attribute name
+            set_current.electricity = amps
             
             await self.send_datagram(set_current)
+            _LOGGER.debug(f"SetAndGetOutputElectricity envoyé à {self.info.serial}")
             
-            # Attendre la réponse
-            await asyncio.sleep(1)
+            # Attendre la réponse SetAndGetOutputElectricityResponse
+            response = await self._wait_for_response([SetAndGetOutputElectricityResponse.COMMAND], 5.0)
             
-            self.config.max_electricity = amps
-            _LOGGER.info(f"Courant maximum défini à {amps}A")
-            return True
+            if not response:
+                _LOGGER.error(f"Pas de réponse pour set_max_electricity de {self.info.serial}")
+                return False
+                
+            if hasattr(response, 'electricity') and response.electricity == amps:
+                self.config.max_electricity = amps
+                _LOGGER.info(f"Courant maximum confirmé à {amps}A pour {self.info.serial}")
+                return True
+            else:
+                _LOGGER.error(f"Courant non confirmé: demandé {amps}A, reçu {getattr(response, 'electricity', 'unknown')}")
+                return False
             
         except Exception as e:
-            _LOGGER.error(f"Erreur lors de la configuration du courant: {e}")
+            _LOGGER.error(f"Erreur lors de la configuration du courant pour {self.info.serial}: {e}")
             return False
     
     async def set_name(self, name: str) -> bool:
@@ -487,6 +499,8 @@ class Communicator:
             await self._handle_charge_record(evse, datagram)
         elif isinstance(datagram, Heading):
             await self._handle_heading(evse, datagram)
+        elif isinstance(datagram, SetAndGetOutputElectricityResponse):
+            await self._handle_output_electricity_response(evse, datagram)
         elif isinstance(datagram, PasswordErrorResponse):
             # PasswordErrorResponse sont gérés dans la méthode login() via _wait_for_response
             # Ignorer ceux qui arrivent ici pour éviter les logs d'erreur trompeurs
@@ -629,6 +643,15 @@ class Communicator:
         response.set_device_serial(evse.info.serial)
         response.set_device_password(evse.password)
         await evse.send_datagram(response)
+    
+    async def _handle_output_electricity_response(self, evse: EVSE, datagram: SetAndGetOutputElectricityResponse):
+        """Traiter une réponse de configuration de courant"""
+        _LOGGER.debug(f"Réponse courant de sortie reçue de {evse.info.serial}: {datagram.electricity}A")
+        # La réponse est automatiquement stockée dans evse._last_response pour _wait_for_response
+        # Mettre à jour la configuration locale si c'est une confirmation de SET
+        if hasattr(datagram, 'action') and datagram.action == 1:  # SET action
+            evse.config.max_electricity = datagram.electricity
+            await self._notify_callbacks('evse_changed', evse)
     
     async def send(self, datagram: Datagram, evse: EVSE) -> int:
         """Envoyer un datagramme"""
