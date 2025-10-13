@@ -61,6 +61,19 @@ class EVSEStartChargeButton(EVSEBaseButton):
         if await self.client.start_charging(self.serial, amps=None, single_phase=False):
             await self.coordinator.async_request_refresh()
 
+    @property
+    def available(self) -> bool:
+        # Hérite de base (online + logged_in) ET cooldown expiré
+        if not super().available:
+            return False
+        remaining = self.client.get_cooldown_remaining(self.serial)
+        return remaining.total_seconds() <= 0
+
+    @property
+    def extra_state_attributes(self):
+        remaining = self.client.get_cooldown_remaining(self.serial)
+        return {"cooldown_remaining_s": int(remaining.total_seconds())}
+
 
 class EVSEStopChargeButton(EVSEBaseButton):
     def __init__(self, coordinator, client, serial: str, base_name: str):
