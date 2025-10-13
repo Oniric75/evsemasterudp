@@ -1,0 +1,15 @@
+EVSE Master UDP - Python Home Assistant Integration
+
+This project is an independent Python reimplementation for Home Assistant inspired by,
+and referencing, the reverse-engineered protocol knowledge from the TypeScript project:
+  https://github.com/johnwoo-nl/emproto
+
+No original source files from that repository were copied verbatim; the implementation
+was rewritten in Python based on publicly observable protocol behavior and conceptual
+structure.
+
+Attributions:
+- Original EmProto reverse engineering: johnwoo-nl (MIT licensed)
+- Python integration design & implementation: Oniric75 (2024-2025)
+
+This file is provided for clarity of provenance. See LICENSE for licensing terms.
