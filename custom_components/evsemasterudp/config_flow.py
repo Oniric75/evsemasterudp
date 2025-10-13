@@ -76,17 +76,32 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             raise CannotConnect
     
     try:
-        # Attendre un peu pour découvrir les EVSEs
+        # Attendre plus longtemps pour découvrir les EVSEs (comme test_full.py)
         import asyncio
-        await asyncio.sleep(3)
+        await asyncio.sleep(5)
         
-        # Vérifier si l'EVSE est trouvée
+        # Vérifier si l'EVSE est trouvée - Retry en cas d'échec
         evse = client.get_evse(serial)
         if not evse:
+            # Retry après 2 secondes supplémentaires
+            _LOGGER.warning(f"EVSE {serial} non trouvée, nouvelle tentative...")
+            await asyncio.sleep(2)
+            evse = client.get_evse(serial)
+            
+        if not evse:
+            _LOGGER.error(f"EVSE {serial} non trouvée après 7 secondes")
             raise CannotConnect
         
-        # Tester la connexion
+        _LOGGER.info(f"EVSE {serial} trouvée, tentative de connexion...")
+        
+        # Tester la connexion avec retry
         success = await client.login(serial, password)
+        if not success:
+            # Un seul retry pour éviter de bloquer l'EVSE
+            _LOGGER.warning(f"Première tentative d'auth échouée pour {serial}, retry...")
+            await asyncio.sleep(2)
+            success = await client.login(serial, password)
+            
         if not success:
             raise InvalidAuth
         

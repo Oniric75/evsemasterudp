@@ -165,6 +165,10 @@ class EVSE:
         try:
             _LOGGER.info(f"Tentative de connexion à {self.info.serial} avec mot de passe")
             
+            # 0. Réinitialiser l'état de connexion avant de commencer
+            self._logged_in = False
+            self.last_active_login = None
+            
             # 1. Envoyer RequestLogin avec le mot de passe
             login_request = RequestLogin()
             login_request.set_device_serial(self.info.serial)
@@ -217,13 +221,15 @@ class EVSE:
         """Attendre une réponse avec commands spécifiques"""
         start_time = asyncio.get_event_loop().time()
         
+        # Ignorer toute réponse antérieure en remettant à zéro
+        self._last_response = None
+        
         while (asyncio.get_event_loop().time() - start_time) < timeout:
-            # Vérifier si on a reçu une réponse avec une commande attendue
-            if hasattr(self, '_last_response') and self._last_response:
-                if self._last_response.get_command() in expected_commands:
-                    response = self._last_response
-                    self._last_response = None  # Consommer la réponse
-                    return response
+            # Vérifier si on a reçu une nouvelle réponse avec une commande attendue
+            if self._last_response and self._last_response.get_command() in expected_commands:
+                response = self._last_response
+                self._last_response = None  # Consommer la réponse
+                return response
             
             await asyncio.sleep(0.1)
         
