@@ -1,5 +1,5 @@
 """
-Communicateur UDP pour les EVSEs EmProto
+UDP Communicator for EmProto EVSEs
 """
 import asyncio
 import socket
@@ -20,7 +20,7 @@ from .datagrams import (
 _LOGGER = logging.getLogger(__name__)
 
 class EVSEInfo:
-    """Informations sur une EVSE"""
+    """Information about an EVSE"""
     def __init__(self, serial: str, ip: str, port: int):
         self.serial = serial
         self.ip = ip
@@ -36,10 +36,10 @@ class EVSEInfo:
         self.can_force_single_phase = False
         self.feature = 0
         self.support_new = 0
-        self.device_id = ""  # ID du device extrait de la commande 0x010c
+        self.device_id = ""  # Device ID extracted from command 0x010c
 
 class EVSEConfig:
-    """Configuration d'une EVSE"""
+    """EVSE configuration"""
     def __init__(self):
         self.name = ""
         self.language = 254
@@ -48,7 +48,7 @@ class EVSEConfig:
         self.temperature_unit = 1
 
 class EVSEState:
-    """État électrique d'une EVSE"""
+    """Electrical state of an EVSE"""
     def __init__(self):
         self.current_power = 0.0
         self.current_amount = 0.0
@@ -66,7 +66,7 @@ class EVSEState:
         self.errors = []
 
 class EVSECurrentCharge:
-    """Session de charge en cours"""
+    """Current charging session"""
     def __init__(self):
         self.port = 1
         self.current_state = 0
@@ -86,7 +86,7 @@ class EVSECurrentCharge:
         self.charge_fee = 0.0
 
 class EVSE:
-    """Représentation d'une EVSE"""
+    """Representation of an EVSE"""
     
     def __init__(self, communicator: 'Communicator', serial: str, ip: str, port: int):
         self.communicator = communicator
@@ -99,22 +99,21 @@ class EVSE:
         self.last_active_login: Optional[datetime] = None
         self.password: Optional[str] = None
         self._logged_in = False
-        self._last_response = None  # Pour attendre les réponses d'authentification
+        self._last_response = None  # To wait for authentication responses
         
-        # États possibles selon le protocole
+        # Possible states according to the protocol
         self.GUN_STATES = {
             0: "DISCONNECTED",
             1: "CONNECTED_LOCKED", 
             2: "CONNECTED_UNLOCKED"
         }
-        
         self.OUTPUT_STATES = {
             0: "IDLE",
             1: "CHARGING"
         }
     
     def update_ip(self, ip: str, port: int) -> bool:
-        """Mettre à jour l'IP et le port"""
+        """Update IP and port"""
         self.last_seen = datetime.now()
         changed = False
         
@@ -129,16 +128,16 @@ class EVSE:
         return changed
     
     def is_online(self) -> bool:
-        """Vérifier si l'EVSE est en ligne"""
-        # Considérer offline après 90 secondes (ajusté pour intervalle de poll 60s)
+        """Check if the EVSE is online"""
+        # Consider offline after 90 seconds (adjusted for 60s poll interval)
         return (datetime.now() - self.last_seen).total_seconds() < 90
     
     def is_logged_in(self) -> bool:
-        """Vérifier si on est connecté à l'EVSE"""
+        """Check if logged in to the EVSE"""
         return self._logged_in and self.is_online()
     
     def get_meta_state(self) -> str:
-        """Obtenir l'état méta de l'EVSE"""
+        """Get the meta state of the EVSE"""
         if not self.is_online():
             return "OFFLINE"
         if not self.is_logged_in():
@@ -158,81 +157,81 @@ class EVSE:
         return "IDLE"
     
     async def send_datagram(self, datagram: Datagram) -> int:
-        """Envoyer un datagramme à l'EVSE"""
+        """Send a datagram to the EVSE"""
         if isinstance(datagram, HeadingResponse):
             self.last_active_login = datetime.now()
         
         return await self.communicator.send(datagram, self)
     
     async def login(self, password: str) -> bool:
-        """Se connecter à l'EVSE selon la séquence TypeScript"""
+        """Log in to the EVSE following the TypeScript sequence"""
         try:
-            _LOGGER.info(f"Tentative de connexion à {self.info.serial} avec mot de passe")
+            _LOGGER.info(f"Attempting to connect to {self.info.serial} with password")
             
-            # 0. Réinitialiser l'état de connexion avant de commencer
+            # 0. Reset connection state before starting
             self._logged_in = False
             self.last_active_login = None
             
-            # 1. Envoyer RequestLogin avec le mot de passe
+            # 1. Send RequestLogin with password
             login_request = RequestLogin()
             login_request.set_device_serial(self.info.serial)
             login_request.set_device_password(password)
             
             await self.send_datagram(login_request)
-            _LOGGER.debug(f"RequestLogin envoyé à {self.info.serial}")
+            _LOGGER.debug(f"RequestLogin sent to {self.info.serial}")
             
-            # 2. Attendre LoginResponse ou PasswordErrorResponse (3 secondes max)
+            # 2. Wait for LoginResponse or PasswordErrorResponse (max 3 seconds)
             response = await self._wait_for_response([LoginResponse.COMMAND, PasswordErrorResponse.COMMAND], 3.0)
             
             if response and response.get_command() == PasswordErrorResponse.COMMAND:
-                _LOGGER.error(f"Mot de passe incorrect pour {self.info.serial}")
+                _LOGGER.error(f"Incorrect password for {self.info.serial}")
                 return False
             
             if not response or response.get_command() != LoginResponse.COMMAND:
-                _LOGGER.error(f"Pas de réponse de connexion de {self.info.serial}")
+                _LOGGER.error(f"No login response from {self.info.serial}")
                 return False
             
-            # 3. Mot de passe correct, sauvegarder et envoyer LoginConfirm
+            # 3. Password correct, save and send LoginConfirm
             self.password = password
-            _LOGGER.info(f"Mot de passe accepté pour {self.info.serial}")
+            _LOGGER.info(f"Password accepted for {self.info.serial}")
             
-            # 4. Envoyer LoginConfirm pour finaliser
+            # 4. Send LoginConfirm to finalize
             login_confirm = LoginConfirm()
             login_confirm.set_device_serial(self.info.serial)
             login_confirm.set_device_password(password)
             
             await self.send_datagram(login_confirm)
-            _LOGGER.debug(f"LoginConfirm envoyé à {self.info.serial}")
+            _LOGGER.debug(f"LoginConfirm sent to {self.info.serial}")
             
-            # 5. Marquer comme connecté
+            # 5. Mark as connected
             self._logged_in = True
             self.last_active_login = datetime.now()
-            _LOGGER.info(f"Connexion établie avec {self.info.serial}")
+            _LOGGER.info(f"Connection established with {self.info.serial}")
             
-            # 6. Demander la configuration (comme TypeScript)
+            # 6. Request configuration (like TypeScript)
             try:
                 await self._fetch_config()
             except Exception as e:
-                _LOGGER.warning(f"Impossible de récupérer la config pour {self.info.serial}: {e}")
+                _LOGGER.warning(f"Unable to retrieve config for {self.info.serial}: {e}")
             
             return True
                 
         except Exception as e:
-            _LOGGER.error(f"Erreur lors de la connexion à {self.info.serial}: {e}")
+            _LOGGER.error(f"Error while connecting to {self.info.serial}: {e}")
             return False
     
     async def _wait_for_response(self, expected_commands: list, timeout: float):
-        """Attendre une réponse avec commands spécifiques"""
+        """Wait for a response with specific commands"""
         start_time = asyncio.get_event_loop().time()
         
-        # Ignorer toute réponse antérieure en remettant à zéro
+    # Ignore any previous response by resetting to zero
         self._last_response = None
         
         while (asyncio.get_event_loop().time() - start_time) < timeout:
-            # Vérifier si on a reçu une nouvelle réponse avec une commande attendue
+            # Check if a new response with an expected command was received
             if self._last_response and self._last_response.get_command() in expected_commands:
                 response = self._last_response
-                self._last_response = None  # Consommer la réponse
+                self._last_response = None  # Consume the response
                 return response
             
             await asyncio.sleep(0.1)
@@ -240,17 +239,17 @@ class EVSE:
         return None
     
     async def _fetch_config(self):
-        """Récupérer la configuration de l'EVSE"""
-        # Envoyer une demande de statut pour récupérer les données
+        """Fetch the EVSE configuration"""
+        # Send a status request to retrieve data
         heading = Heading()
         heading.set_device_serial(self.info.serial)
         heading.set_device_password(self.password)
         await self.send_datagram(heading)
-        _LOGGER.debug(f"Demande de configuration envoyée à {self.info.serial}")
+        _LOGGER.debug(f"Configuration request sent to {self.info.serial}")
     
     async def charge_start(self, max_amps: int = 6, single_phase: bool = False, 
                           user_id: str = "", charge_id: str = "") -> bool:
-        """Démarrer la charge"""
+        """Start charging"""
         if not self.is_logged_in():
             raise RuntimeError("Non connecté à l'EVSE")
         
@@ -266,20 +265,20 @@ class EVSE:
             if charge_id:
                 charge_start.set_charge_id(charge_id)
             else:
-                # Générer un ID unique
+                # Generate a unique ID
                 import time
                 charge_start.set_charge_id(f"{int(time.time())}")
             
             await self.send_datagram(charge_start)
-            _LOGGER.info(f"Commande de charge envoyée: {max_amps}A")
+            _LOGGER.info(f"Charge command sent: {max_amps}A")
             return True
             
         except Exception as e:
-            _LOGGER.error(f"Erreur lors du démarrage de charge: {e}")
+            _LOGGER.error(f"Error while starting charge: {e}")
             return False
     
     async def charge_stop(self, user_id: str = "") -> bool:
-        """Arrêter la charge"""
+        """Stop charging"""
         if not self.is_logged_in():
             raise RuntimeError("Non connecté à l'EVSE")
         
@@ -290,21 +289,21 @@ class EVSE:
             charge_stop.user_id = user_id
             
             await self.send_datagram(charge_stop)
-            _LOGGER.info("Commande d'arrêt de charge envoyée")
+            _LOGGER.info("Charge stop command sent")
             return True
             
         except Exception as e:
-            _LOGGER.error(f"Erreur lors de l'arrêt de charge: {e}")
+            _LOGGER.error(f"Error while stopping charge: {e}")
             return False
     
     async def set_max_electricity(self, amps: int) -> bool:
-        """Définir le courant maximum"""
+        """Set the maximum current"""
         if not self.is_logged_in():
-            _LOGGER.error(f"EVSE {self.info.serial} non connectée")
+            _LOGGER.error(f"EVSE {self.info.serial} not connected")
             return False
         
         try:
-            _LOGGER.info(f"Définition courant max à {amps}A pour {self.info.serial}")
+            _LOGGER.info(f"Setting max current to {amps}A for {self.info.serial}")
             
             set_current = SetAndGetOutputElectricity()
             set_current.set_device_serial(self.info.serial)
@@ -313,67 +312,67 @@ class EVSE:
             set_current.electricity = amps
             
             await self.send_datagram(set_current)
-            _LOGGER.debug(f"SetAndGetOutputElectricity envoyé à {self.info.serial}")
+            _LOGGER.debug(f"SetAndGetOutputElectricity sent to {self.info.serial}")
             
-            # Attendre la réponse SetAndGetOutputElectricityResponse
+            # Wait for SetAndGetOutputElectricityResponse
             response = await self._wait_for_response([SetAndGetOutputElectricityResponse.COMMAND], 5.0)
             
             if not response:
-                _LOGGER.error(f"Pas de réponse pour set_max_electricity de {self.info.serial}")
+                _LOGGER.error(f"No response for set_max_electricity from {self.info.serial}")
                 return False
                 
             if hasattr(response, 'electricity') and response.electricity == amps:
                 self.config.max_electricity = amps
-                _LOGGER.info(f"Courant maximum confirmé à {amps}A pour {self.info.serial}")
+                _LOGGER.info(f"Max current confirmed at {amps}A for {self.info.serial}")
                 return True
             else:
-                _LOGGER.error(f"Courant non confirmé: demandé {amps}A, reçu {getattr(response, 'electricity', 'unknown')}")
+                _LOGGER.error(f"Current not confirmed: requested {amps}A, received {getattr(response, 'electricity', 'unknown')}")
                 return False
             
         except Exception as e:
-            _LOGGER.error(f"Erreur lors de la configuration du courant pour {self.info.serial}: {e}")
+            _LOGGER.error(f"Error while setting current for {self.info.serial}: {e}")
             return False
     
     async def set_name(self, name: str) -> bool:
-        """Définir le nom de l'EVSE"""
+        """Set the EVSE name"""
         if not self.is_logged_in():
             raise RuntimeError("Non connecté à l'EVSE")
         
         try:
-            # TODO: Réimplémenter SetAndGetNickName
+            # TODO: Reimplement SetAndGetNickName
             # set_name = SetAndGetNickName()
             # set_name.set_device_serial(self.info.serial)
             # set_name.set_device_password(self.password)
             # set_name.name = name
             # await self.send_datagram(set_name)
             # self.config.name = name
-            _LOGGER.info(f"Configuration du nom à implémenter: {name}")
+            _LOGGER.info(f"Name configuration to be implemented: {name}")
             return True
             
         except Exception as e:
-            _LOGGER.error(f"Erreur lors de la configuration du nom: {e}")
+            _LOGGER.error(f"Error while setting name: {e}")
             return False
     
     async def sync_time(self) -> bool:
-        """Synchroniser l'heure de l'EVSE"""
+        """Synchronize EVSE time"""
         if not self.is_logged_in():
             raise RuntimeError("Non connecté à l'EVSE")
         
         try:
-            # TODO: Réimplémenter SetAndGetSystemTime
+            # TODO: Reimplement SetAndGetSystemTime
             # sync_time = SetAndGetSystemTime()
             # sync_time.set_device_serial(self.info.serial)
             # sync_time.set_device_password(self.password)
             # await self.send_datagram(sync_time)
-            _LOGGER.info("Synchronisation du temps à implémenter")
+            _LOGGER.info("Time synchronization to be implemented")
             return True
             
         except Exception as e:
-            _LOGGER.error(f"Erreur lors de la synchronisation: {e}")
+            _LOGGER.error(f"Error during synchronization: {e}")
             return False
 
 class Communicator:
-    """Communicateur UDP principal"""
+    """Main UDP communicator"""
     
     def __init__(self, port: int = 28376):
         self.port = port
@@ -384,27 +383,27 @@ class Communicator:
         self._periodic_task: Optional[asyncio.Task] = None
     
     async def start(self) -> int:
-        """Démarrer le communicateur"""
+        """Start the communicator"""
         if self.running:
             return self.port
         
         try:
-            # Créer le socket UDP
+            # Create the UDP socket
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.socket.setblocking(False)
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.socket.bind(('', self.port))
             
-            # Activer le broadcast si possible
+            # Enable broadcast if possible
             try:
                 self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             except OSError:
-                _LOGGER.warning("Broadcast non supporté")
+                _LOGGER.warning("Broadcast not supported")
             
             self.running = True
-            _LOGGER.info(f"Communicateur démarré sur le port {self.port}")
+            _LOGGER.info(f"Communicator started on port {self.port}")
             
-            # Démarrer les tâches asyncio
+            # Start asyncio tasks
             asyncio.create_task(self._listen_loop())
             self._periodic_task = asyncio.create_task(self._periodic_checks())
             
@@ -415,7 +414,7 @@ class Communicator:
             raise
     
     async def stop(self):
-        """Arrêter le communicateur"""
+        """Stop the communicator"""
         self.running = False
         
         if self._periodic_task:
@@ -425,34 +424,34 @@ class Communicator:
             self.socket.close()
             self.socket = None
         
-        _LOGGER.info("Communicateur arrêté")
+        _LOGGER.info("Communicator stopped")
     
     async def _listen_loop(self):
-        """Boucle d'écoute UDP"""
+        """UDP listen loop"""
         while self.running and self.socket:
             try:
-                await asyncio.sleep(0.01)  # Éviter de bloquer
+                await asyncio.sleep(0.01)  # Avoid blocking
                 
                 try:
-                    # Vérifier que le socket existe encore
+                    # Check that the socket still exists
                     if not self.socket:
                         break
                         
                     data, addr = self.socket.recvfrom(1024)
                     await self._handle_message(data, addr)
                 except socket.error:
-                    # Pas de données disponibles
+                    # No data available
                     continue
                     
             except Exception as e:
-                if self.running and self.socket:  # Ne logger que si on devrait encore tourner
-                    _LOGGER.error(f"Erreur dans la boucle d'écoute: {e}")
+                if self.running and self.socket:  # Only log if we should still be running
+                    _LOGGER.error(f"Error in listen loop: {e}")
                 await asyncio.sleep(1)
         
-        _LOGGER.debug("Boucle d'écoute UDP terminée")
+        _LOGGER.debug("UDP listen loop ended")
     
     async def _handle_message(self, data: bytes, addr: tuple):
-        """Traiter un message reçu"""
+        """Handle a received message"""
         try:
             datagrams = parse_datagrams(data)
             
@@ -460,33 +459,31 @@ class Communicator:
                 await self._process_datagram(datagram, addr)
                 
         except Exception as e:
-            _LOGGER.debug(f"Erreur lors du traitement du message: {e}")
+            _LOGGER.debug(f"Error while handling message: {e}")
     
     async def _process_datagram(self, datagram: Datagram, addr: tuple):
-        """Traiter un datagramme reçu"""
+        """Handle a received datagram"""
         ip, port = addr
         serial = datagram.get_device_serial()
         
         if not serial:
             return
         
-        # Obtenir ou créer l'EVSE
+        # Get or create the EVSE
         evse = self.evses.get(serial)
         if not evse:
             evse = EVSE(self, serial, ip, port)
             self.evses[serial] = evse
-            _LOGGER.info(f"Nouvelle EVSE découverte: {serial} @ {ip}")
+            _LOGGER.info(f"New EVSE discovered: {serial} @ {ip}")
             await self._notify_callbacks('evse_added', evse)
         else:
-            # Mettre à jour l'IP si changée
+            # Update IP if changed
             if evse.update_ip(ip, port):
                 await self._notify_callbacks('evse_changed', evse)
-        
-        # Mettre à jour last_seen et stocker la réponse pour l'authentification
+        # Update last_seen and store the response for authentication
         evse.last_seen = datetime.now()
-        evse._last_response = datagram  # Stocker pour _wait_for_response
-        
-        # Traiter le datagramme spécifique
+        evse._last_response = datagram  # Store for _wait_for_response
+        # Handle the specific datagram
         if isinstance(datagram, Login):
             await self._handle_login(evse, datagram)
         elif isinstance(datagram, LoginResponse):
@@ -506,25 +503,25 @@ class Communicator:
         elif isinstance(datagram, SetAndGetOutputElectricityResponse):
             await self._handle_output_electricity_response(evse, datagram)
         elif isinstance(datagram, PasswordErrorResponse):
-            # PasswordErrorResponse sont gérés dans la méthode login() via _wait_for_response
-            # Ignorer ceux qui arrivent ici pour éviter les logs d'erreur trompeurs
-            _LOGGER.debug(f"PasswordErrorResponse reçu pour {serial} (géré par la logique d'auth)")
+            # PasswordErrorResponses are handled in the login() method via _wait_for_response
+            # Ignore those arriving here to avoid misleading error logs
+            _LOGGER.debug(f"PasswordErrorResponse received for {serial} (handled by auth logic)")
         # elif isinstance(datagram, UnknownCommand341):
         #     _LOGGER.debug(f"Commande 341 reçue de {serial}, données: {datagram.raw_data.hex()}")
         #     # Pas de traitement spécial nécessaire pour l'instant
     
     async def _handle_login_response(self, evse: EVSE, datagram: LoginResponse):
-        """Traiter une réponse de login réussie (0x0002)"""
-        _LOGGER.info(f"LoginResponse reçue de {evse.info.serial}")
-        # Cette réponse indique que le mot de passe était correct
-        # Le vrai login sera complété par LoginConfirm dans la méthode login()
+        """Handle a successful login response (0x0002)"""
+        _LOGGER.info(f"LoginResponse received from {evse.info.serial}")
+        # This response indicates the password was correct
+        # The real login will be completed by LoginConfirm in the login() method
     
     async def _handle_login(self, evse: EVSE, datagram: Login):
-        """Traiter un broadcast de découverte EVSE"""
+        """Handle an EVSE discovery broadcast"""
         evse.info.brand = datagram.brand
         evse.info.model = datagram.model
         evse.info.hardware_version = datagram.hardware_version
-        evse.info.software_version = datagram.hardware_version  # Utiliser hardware_version comme fallback
+        evse.info.software_version = datagram.hardware_version  # Use hardware_version as fallback
         evse.info.max_power = datagram.max_power
         evse.info.max_electricity = datagram.max_electricity
         evse.info.hot_line = datagram.hot_line
@@ -532,22 +529,20 @@ class Communicator:
         evse.info.can_force_single_phase = datagram.can_force_single_phase
         evse.info.feature = datagram.feature
         evse.info.support_new = datagram.support_new
-        
-        # Confirmer le login
+        # Confirm login
         confirm = LoginConfirm()
         confirm.set_device_serial(evse.info.serial)
         confirm.set_device_password(evse.password)
         await evse.send_datagram(confirm)
-        
         evse._logged_in = True
         await self._notify_callbacks('evse_logged_in', evse)
     
     async def _handle_status(self, evse: EVSE, datagram: SingleACStatus):
-        """Traiter un status AC"""
+        """Handle an AC status"""
         if not evse.state:
             evse.state = EVSEState()
         
-        # Copier les données du SingleACStatus vers EVSEState
+        # Copy data from SingleACStatus to EVSEState
         evse.state.current_power = datagram.current_power
         evse.state.current_amount = datagram.total_kwh_counter  # Corriger le mapping
         evse.state.l1_voltage = datagram.l1_voltage
@@ -562,26 +557,21 @@ class Communicator:
         evse.state.gun_state = datagram.gun_state
         evse.state.output_state = datagram.output_state
         evse.state.errors = datagram.errors
-        
-        _LOGGER.debug(f"Status reçu pour {evse.info.serial}: L1={datagram.l1_voltage}V, Temp={datagram.inner_temp}°C")
-        
-        # Répondre au status
+        _LOGGER.debug(f"Status received for {evse.info.serial}: L1={datagram.l1_voltage}V, Temp={datagram.inner_temp}°C")
+        # Respond to status
         response = SingleACStatusResponse()
         response.set_device_serial(evse.info.serial)
         response.set_device_password(evse.password)
         await evse.send_datagram(response)
-        
         await self._notify_callbacks('evse_state_changed', evse)
     
     async def _handle_charging_status(self, evse: EVSE, datagram: SingleACChargingStatusPublicAuto):
-        """Traiter le statut de charge automatique AC (commande 0x0005)"""
-        _LOGGER.debug(f"Statut de charge reçu pour {evse.info.serial}")
-        
-        # Mettre à jour les informations de charge si disponibles
+        """Handle automatic AC charging status (command 0x0005)"""
+        _LOGGER.debug(f"Charge status received for {evse.info.serial}")
+        # Update charge information if available
         if not evse.current_charge:
             evse.current_charge = EVSECurrentCharge()
-        
-        # Copier les données du statut de charge
+        # Copy charge status data
         evse.current_charge.charge_id = datagram.charge_id
         evse.current_charge.current_state = datagram.current_state
         evse.current_charge.start_type = datagram.start_type
@@ -596,13 +586,11 @@ class Communicator:
         evse.current_charge.charge_kwh = datagram.charge_kwh
         evse.current_charge.charge_price = datagram.charge_price
         evse.current_charge.charge_fee = datagram.charge_fee
-        
-        # Envoyer accusé de réception (comme dans le TypeScript)
+        # Send acknowledgment (as in TypeScript)
         response = SingleACChargingStatusResponse()
         response.set_device_serial(evse.info.serial)
         response.set_device_password(evse.password)
         await evse.send_datagram(response)
-        
         await self._notify_callbacks('evse_charge_status_changed', evse)
     
     # MÉTHODES TEMPORAIREMENT DÉSACTIVÉES - À RÉIMPLÉMENTER
@@ -616,19 +604,19 @@ class Communicator:
     #     pass
     
     async def _handle_charge_record(self, evse: EVSE, datagram: CurrentChargeRecord):
-        """Traiter un enregistrement de charge"""
+        """Handle a charge record"""
         if not evse.current_charge:
             evse.current_charge = EVSECurrentCharge()
         
-        # Mapper les attributs du protocole vers la structure interne
+        # Map protocol attributes to internal structure
         evse.current_charge.port = datagram.line_id  # line_id → port
-        # current_state n'existe pas dans CurrentChargeRecord, garder valeur existante
+        # current_state does not exist in CurrentChargeRecord, keep existing value
         evse.current_charge.charge_id = datagram.charge_id
         evse.current_charge.start_type = datagram.start_type
         evse.current_charge.charge_type = datagram.charge_type
         evse.current_charge.reservation_date = datagram.reservation_data  # reservation_data → reservation_date
         evse.current_charge.user_id = datagram.start_user_id  # start_user_id → user_id
-        # max_electricity n'existe pas dans CurrentChargeRecord, garder valeur existante
+        # max_electricity does not exist in CurrentChargeRecord, keep existing value
         evse.current_charge.start_date = datagram.start_date
         evse.current_charge.duration_seconds = datagram.charged_time  # charged_time → duration_seconds
         evse.current_charge.start_kwh_counter = datagram.charge_start_power  # charge_start_power → start_kwh_counter
@@ -637,32 +625,32 @@ class Communicator:
         evse.current_charge.charge_price = datagram.charge_price
         evse.current_charge.fee_type = datagram.fee_type
         evse.current_charge.charge_fee = datagram.charge_fee
-        
+        evse._last_response = datagram  # Store for _wait_for_response
         await self._notify_callbacks('evse_charge_changed', evse)
     
     async def _handle_heading(self, evse: EVSE, datagram: Heading):
-        """Traiter un heading (keepalive)"""
-        # Répondre pour maintenir la session
+        """Handle a heading (keepalive)"""
+        # Respond to maintain the session
         response = HeadingResponse()
         response.set_device_serial(evse.info.serial)
         response.set_device_password(evse.password)
         await evse.send_datagram(response)
     
     async def _handle_output_electricity_response(self, evse: EVSE, datagram: SetAndGetOutputElectricityResponse):
-        """Traiter une réponse de configuration de courant"""
-        _LOGGER.debug(f"Réponse courant de sortie reçue de {evse.info.serial}: {datagram.electricity}A")
-        # La réponse est automatiquement stockée dans evse._last_response pour _wait_for_response
-        # Mettre à jour la configuration locale si c'est une confirmation de SET
+        """Handle a current configuration response"""
+        _LOGGER.debug(f"Output current response received from {evse.info.serial}: {datagram.electricity}A")
+        # The response is automatically stored in evse._last_response for _wait_for_response
+        # Update local configuration if it's a SET confirmation
         if hasattr(datagram, 'action') and datagram.action == 1:  # SET action
             evse.config.max_electricity = datagram.electricity
             await self._notify_callbacks('evse_changed', evse)
     
     async def send(self, datagram: Datagram, evse: EVSE) -> int:
-        """Envoyer un datagramme"""
+        """Send a datagram"""
         if not self.running:
             raise RuntimeError("Communicateur non démarré")
         
-        # Définir le serial et password si pas encore fait
+    # Set serial and password if not already done
         if not datagram.get_device_serial():
             datagram.set_device_serial(evse.info.serial)
         
@@ -671,7 +659,7 @@ class Communicator:
         
         buffer = datagram.pack()
         
-        # Envoyer via le socket
+    # Send via the socket
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
             None, 
@@ -683,78 +671,78 @@ class Communicator:
         return len(buffer)
     
     async def _periodic_checks(self):
-        """Vérifications périodiques"""
+        """Periodic checks"""
         while self.running:
             try:
                 await asyncio.sleep(5)
                 
                 for evse in self.evses.values():
-                    # Vérifier si on doit se reconnecter
+                    # Check if we need to reconnect
                     if evse.is_logged_in() and evse.last_active_login:
                         time_since_login = datetime.now() - evse.last_active_login
                         if time_since_login.total_seconds() > 30:
-                            # Relancer le login
+                            # Relaunch login
                             if evse.password:
                                 await evse.login(evse.password)
                     
-                    # Demander l'état régulièrement
+                    # Request status regularly
                     if evse.is_logged_in():
                         await evse.send_datagram(RequestChargeStatusRecord())
                 
             except Exception as e:
-                _LOGGER.error(f"Erreur dans les vérifications périodiques: {e}")
+                _LOGGER.error(f"Error in periodic checks: {e}")
     
     async def _notify_callbacks(self, event: str, evse: EVSE):
-        """Notifier les callbacks"""
+        """Notify callbacks"""
         for callback in self.callbacks.values():
             try:
                 await callback(event, evse)
             except Exception as e:
-                _LOGGER.error(f"Erreur dans le callback: {e}")
+                _LOGGER.error(f"Error in callback: {e}")
     
     def add_callback(self, name: str, callback: Callable):
-        """Ajouter un callback"""
+        """Add a callback"""
         self.callbacks[name] = callback
     
     def remove_callback(self, name: str):
-        """Supprimer un callback"""
+        """Remove a callback"""
         self.callbacks.pop(name, None)
     
     def get_evse(self, serial: str) -> Optional[EVSE]:
-        """Obtenir une EVSE par son numéro de série"""
+        """Get an EVSE by its serial number"""
         return self.evses.get(serial)
     
     def get_all_evses(self) -> Dict[str, EVSE]:
-        """Obtenir toutes les EVSEs"""
+        """Get all EVSEs"""
         return self.evses.copy()
     
     def close(self):
-        """Fermer le communicateur et libérer les ressources"""
-        _LOGGER.debug("Fermeture du communicateur UDP")
+        """Close the communicator and release resources"""
+        _LOGGER.debug("Closing UDP communicator")
         
-        # Arrêter la boucle d'écoute
+    # Stop the listen loop
         self.running = False
         
-        # Fermer le socket
+    # Close the socket
         if self.socket:
             try:
                 self.socket.close()
             except Exception as e:
-                _LOGGER.debug(f"Erreur lors de la fermeture du socket: {e}")
+                _LOGGER.debug(f"Error while closing socket: {e}")
             finally:
                 self.socket = None
         
-        # Annuler la tâche d'écoute si elle existe
+    # Cancel the listen task if it exists
         if hasattr(self, '_listen_task') and self._listen_task and not self._listen_task.done():
             self._listen_task.cancel()
         
-        _LOGGER.debug("Communicateur UDP fermé")
+    _LOGGER.debug("UDP communicator closed")
 
-# Singleton global
+# Global singleton
 _communicator_instance: Optional[Communicator] = None
 
 def get_communicator() -> Communicator:
-    """Obtenir l'instance singleton du communicateur"""
+    """Get the singleton instance of the communicator"""
     global _communicator_instance
     if _communicator_instance is None:
         _communicator_instance = Communicator()
