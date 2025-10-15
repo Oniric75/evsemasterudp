@@ -1,6 +1,6 @@
 """
-Intégration EVSE Master UDP pour Home Assistant
-Support des bornes EVSE utilisant le protocole UDP EmProto (Morec et compatibles)
+EVSE Master UDP integration for Home Assistant
+Supports EVSE stations using the UDP EmProto protocol (Morec and compatibles)
 """
 from __future__ import annotations
 
@@ -21,14 +21,14 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "evsemasterudp"
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BUTTON, Platform.NUMBER]
 
-# Intervalle de mise à jour (en secondes)
+ # Update interval (in seconds)
 UPDATE_INTERVAL = timedelta(seconds=60)
 
 class EVSEDataUpdateCoordinator(DataUpdateCoordinator):
-    """Coordinateur pour mettre à jour les données EVSE"""
+    """Coordinator to update EVSE data"""
 
     def __init__(self, hass: HomeAssistant, client: EVSEClient) -> None:
-        """Initialiser le coordinateur"""
+        """Initialize the coordinator"""
         super().__init__(
             hass,
             _LOGGER,
@@ -38,69 +38,69 @@ class EVSEDataUpdateCoordinator(DataUpdateCoordinator):
         self.client = client
 
     async def _async_update_data(self):
-        """Récupérer les données des EVSEs"""
+        """Fetch EVSE data"""
         try:
-            # Récupérer toutes les EVSEs
+            # Retrieve all EVSEs
             evses = self.client.get_all_evses()
-            
+
             if not evses:
-                _LOGGER.debug("Aucune EVSE trouvée lors de la mise à jour")
+                _LOGGER.debug("No EVSE found during update")
                 return {}
-            
-            _LOGGER.debug(f"Données EVSE mises à jour: {len(evses)} bornes trouvées")
+
+            _LOGGER.debug(f"EVSE data updated: {len(evses)} stations found")
             return evses
             
         except Exception as err:
-            _LOGGER.warning(f"Erreur lors de la mise à jour des données EVSE: {err}")
-            # Retourner les données précédentes plutôt que de lever une exception
+            _LOGGER.warning(f"Error updating EVSE data: {err}")
+            # Return previous data instead of raising exception
             return self.data if hasattr(self, 'data') and self.data else {}
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Configurer l'intégration EVSE à partir d'une entrée de configuration"""
+    """Set up the EVSE integration from a config entry"""
     
-    # Récupérer les paramètres de configuration
+    # Retrieve configuration parameters
     serial = entry.data.get("serial")
     password = entry.data.get("password")
     port = entry.data.get("port", 28376)
+
+    _LOGGER.info(f"Configuring EVSE {serial} on port {port}")
     
-    _LOGGER.info(f"Configuration de l'EVSE {serial} sur le port {port}")
-    
-    # Obtenir le client EVSE
+    # Get the EVSE client
     client = get_evse_client()
-    
-    # Démarrer le client s'il n'est pas déjà démarré
+
+    # Start the client if not already running
     if not client.running:
         try:
             await client.start()
         except Exception as err:
-            _LOGGER.error(f"Impossible de démarrer le client EVSE: {err}")
+            _LOGGER.error(f"Unable to start EVSE client: {err}")
             return False
     
-    # Attendre un peu pour découvrir les EVSEs
+    # Wait a bit to discover EVSEs
     await asyncio.sleep(3)
     
-    # Essayer de se connecter à l'EVSE configurée
+    # Try to connect to the configured EVSE
     if serial and password:
-        # Essayer plusieurs fois le login car l'EVSE peut ne pas être immédiatement disponible
+        # Try login several times as the EVSE may not be immediately available
         for attempt in range(3):
             success = await client.login(serial, password)
             if success:
-                _LOGGER.info(f"Connexion réussie à l'EVSE {serial}")
+                _LOGGER.info(f"Successfully connected to EVSE {serial}")
                 break
             else:
-                _LOGGER.warning(f"Tentative de connexion {attempt + 1}/3 à l'EVSE {serial} échouée")
-                if attempt < 2:  # Attendre avant le prochain essai
+                _LOGGER.warning(f"Connection attempt {attempt + 1}/3 to EVSE {serial} failed")
+                if attempt < 2:  # Wait before next attempt
                     await asyncio.sleep(2)
         else:
-            _LOGGER.warning(f"Impossible de se connecter à l'EVSE {serial} après 3 tentatives")
+            _LOGGER.warning(f"Unable to connect to EVSE {serial} after 3 attempts")
     
-    # Créer le coordinateur de données
+    # Create the data coordinator
     coordinator = EVSEDataUpdateCoordinator(hass, client)
-    
-    # Première mise à jour des données
+
+    # First data refresh
     await coordinator.async_config_entry_first_refresh()
-    
-    # Stocker le coordinateur dans hass.data
+
+    # Store the coordinator in hass.data
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         "coordinator": coordinator,
@@ -110,39 +110,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Friendly base name for entity display
         "base_name": entry.data.get("name") or "EVSEMaster",
     }
-    
-    # Configurer les plateformes (sensor, switch, number)
+
+    # Set up platforms (sensor, switch, number)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    
-    # Notification pour recommander un redémarrage après installation/mise à jour
+
+    # Notification recommending a restart after installation/update
     create(
         hass,
-        f"EVSE Master UDP configuré avec succès pour l'EVSE {serial}.\n\n"
-        "Il est recommandé de redémarrer Home Assistant pour assurer un fonctionnement optimal.",
-        title="EVSE Master UDP - Installation réussie",
+        f"EVSE Master UDP successfully configured for EVSE {serial}.\n\n"
+        "It is recommended to restart Home Assistant for optimal operation.",
+        title="EVSE Master UDP - Installation successful",
         notification_id=f"evsemasterudp_setup_{serial}"
     )
-    
+
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Décharger l'intégration EVSE"""
+    """Unload the EVSE integration"""
     
-    # Décharger les plateformes
+    # Unload platforms
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    
+
     if unload_ok:
-        # Nettoyer les données
+        # Clean up data
         data = hass.data[DOMAIN].pop(entry.entry_id)
-        
-        # Arrêter le client s'il n'y a plus d'autres entrées
+
+        # Stop the client if there are no other entries
         if not hass.data[DOMAIN]:
             client = data["client"]
             await client.stop()
-    
+
     return unload_ok
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Recharger l'intégration EVSE"""
+    """Reload the EVSE integration"""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)

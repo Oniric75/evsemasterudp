@@ -1,16 +1,16 @@
 """
-Implémentations des datagrammes EVSE EmProto - Version corrigée selon TypeScript original
+Implementations of EVSE EmProto datagrams - Corrected version based on original TypeScript
 """
 import struct
 from typing import Optional, List
 from .datagram import Datagram, register_datagram
 
-# ============================================================================
-# UTILITAIRES (selon TypeScript)
-# ============================================================================
+###############################################################################
+# UTILITIES (from TypeScript)
+###############################################################################
 
 def read_temperature(buffer: bytes, offset: int) -> float:
-    """Lecture température selon la formule TypeScript"""
+    """Read temperature using the TypeScript formula"""
     if len(buffer) < offset + 2:
         return -1.0
     
@@ -20,41 +20,41 @@ def read_temperature(buffer: bytes, offset: int) -> float:
     return round((temp_raw - 20000) * 0.01, 2)
 
 def read_string(buffer: bytes, offset: int, length: int) -> str:
-    """Lecture string selon TypeScript"""
+    """Read string using TypeScript logic"""
     if len(buffer) < offset + length:
         return ""
     return buffer[offset:offset+length].decode('ascii', errors='ignore').rstrip('\x00')
 
-# ============================================================================
-# COMMANDES PRINCIPALES (triées par ordre d'importance)
-# ============================================================================
+###############################################################################
+# MAIN COMMANDS (sorted by importance)
+###############################################################################
 
 @register_datagram  
 class Login(Datagram):
-    """0x0001 - Broadcast de découverte EVSE (EVSE → App)"""
+    """0x0001 - EVSE discovery broadcast (EVSE → App)"""
     COMMAND = 0x0001
     
     def __init__(self):
         super().__init__()
-        self.type: int = 0
-        self.brand: str = ""
-        self.model: str = ""
-        self.hardware_version: str = ""
-        self.max_power: int = 0
-        self.max_electricity: int = 0
-        self.hot_line: str = ""
-        self.p51: int = 0
-        # Attributs dérivés non présents dans le protocole mais attendus par les handlers
-        self.phases: int = 1  # Défaut: monophasé
-        self.can_force_single_phase: bool = False  # Défaut: pas de forçage
-        self.feature: str = ""  # Fonctionnalités supportées
-        self.support_new: bool = False  # Support nouvelles fonctions
+        self.type = 0
+        self.brand = ""
+        self.model = ""
+        self.hardware_version = ""
+        self.max_power = 0
+        self.max_electricity = 0
+        self.hot_line = ""
+        self.p51 = 0
+        # Derived attributes not present in protocol but expected by handlers
+        self.phases = 1  # Default: single phase
+        self.can_force_single_phase = False  # Default: no force
+        self.feature = ""  # Supported features
+        self.support_new = False  # Support for new functions
     
     def pack_payload(self) -> bytes:
-        return b''  # App n'envoie pas ce message
-    
+        return b''  # App does not send this message
+
     def unpack_payload(self, buffer: bytes) -> None:
-        """Parser selon SingleACStatus.ts"""
+        """Parse according to SingleACStatus.ts"""
         if len(buffer) < 54:
             return
             
@@ -68,7 +68,7 @@ class Login(Datagram):
         if len(buffer) > 54:
             self.hot_line = read_string(buffer, 54, 16)
             
-        # Extensions selon la longueur du buffer (voir TypeScript)
+        # Extensions depending on buffer length (see TypeScript)
         if len(buffer) >= 118:
             if len(buffer) == 118:
                 self.hot_line += read_string(buffer, 70, 48)
@@ -84,12 +84,12 @@ class Login(Datagram):
 
 @register_datagram
 class SingleACStatus(Datagram):
-    """0x0004 - Statut temps réel AC (EVSE → App) - COMMANDE PRINCIPALE POUR VOLTAGE/TEMPÉRATURE"""
+    """0x0004 - Real-time AC status (EVSE → App) - MAIN COMMAND FOR VOLTAGE/TEMPERATURE"""
     COMMAND = 0x0004
     
     def __init__(self):
         super().__init__()
-        # Champs selon SingleACStatus.ts (ordre exact)
+    # Fields according to SingleACStatus.ts (exact order)
         self.line_id: int = 0
         self.l1_voltage: float = 0.0          # V * 0.1
         self.l1_electricity: float = 0.0      # A * 0.01  
@@ -98,25 +98,25 @@ class SingleACStatus(Datagram):
         self.inner_temp: float = 0.0          # °C (formule spéciale)
         self.outer_temp: float = 0.0          # °C (formule spéciale)
         self.emergency_btn_state: int = 0
-        self.gun_state: int = 0
-        self.output_state: int = 0
-        self.current_state: int = 0
-        self.errors: List[int] = []           # Bitfield des erreurs
-        # Optionnels triphasé
-        self.l2_voltage: float = 0.0
-        self.l2_electricity: float = 0.0
-        self.l3_voltage: float = 0.0
-        self.l3_electricity: float = 0.0
+        self.gun_state = 0
+        self.output_state = 0
+        self.current_state = 0
+        self.errors = []           # Error bitfield
+        # Optional three-phase
+        self.l2_voltage = 0.0
+        self.l2_electricity = 0.0
+        self.l3_voltage = 0.0
+        self.l3_electricity = 0.0
     
     def pack_payload(self) -> bytes:
-        return b''  # App n'envoie pas ce message
-    
+        return b''  # App does not send this message
+
     def unpack_payload(self, buffer: bytes) -> None:
-        """Parser selon SingleACStatus.ts - EXACT COPY"""
+        """Parse according to SingleACStatus.ts - EXACT COPY"""
         if len(buffer) < 25:
             raise ValueError("Buffer too short for SingleACStatus")
-            
-        # Ordre exact selon TypeScript
+
+        # Exact order from TypeScript
         self.line_id = buffer[0]
         self.l1_voltage = struct.unpack('>H', buffer[1:3])[0] * 0.1
         self.l1_electricity = struct.unpack('>H', buffer[3:5])[0] * 0.01
@@ -129,14 +129,14 @@ class SingleACStatus(Datagram):
         self.output_state = buffer[19]
         self.current_state = buffer[20]
         
-        # Erreurs (bitfield 32-bit)
+        # Errors (32-bit bitfield)
         error_bits = struct.unpack('>I', buffer[21:25])[0]
         self.errors = []
         for i in range(32):
             if error_bits & (1 << i):
                 self.errors.append(i)
         
-        # Triphasé optionnel (si buffer assez long)
+        # Optional three-phase (if buffer long enough)
         if len(buffer) >= 33:
             self.l2_voltage = struct.unpack('>H', buffer[25:27])[0] * 0.1
             self.l2_electricity = struct.unpack('>H', buffer[27:29])[0] * 0.01
@@ -145,56 +145,56 @@ class SingleACStatus(Datagram):
 
 @register_datagram
 class SingleACStatusResponse(Datagram):
-    """0x8004 (32772) - Réponse SingleACStatus (App → EVSE)"""
+    """0x8004 (32772) - SingleACStatus response (App → EVSE)"""
     COMMAND = 32772
     
     def pack_payload(self) -> bytes:
         return bytes([0x01])
     
     def unpack_payload(self, buffer: bytes) -> None:
-        pass  # App vers EVSE
+        pass  # App to EVSE
 
-# ============================================================================
-# COMMANDES D'AUTHENTIFICATION
-# ============================================================================
+###############################################################################
+# AUTHENTICATION COMMANDS
+###############################################################################
 
 @register_datagram
 class RequestLogin(Datagram):
-    """0x8002 (32770) - Demande de connexion (App → EVSE)"""
+    """0x8002 (32770) - Login request (App → EVSE)"""
     COMMAND = 0x8002
     
     def pack_payload(self) -> bytes:
-        return b'\x00'  # Un byte 0x00 selon TypeScript
-    
+        return b'\x00'  # One byte 0x00 as per TypeScript
+
     def unpack_payload(self, buffer: bytes) -> None:
         pass  # Unused: this is an app->EVSE datagram
 
 @register_datagram
 class LoginResponse(Datagram):
-    """0x0002 - Réponse de découverte (EVSE → App)"""
+    """0x0002 - Discovery response (EVSE → App)"""
     COMMAND = 0x0002
     
     def pack_payload(self) -> bytes:
         return b''
     
     def unpack_payload(self, buffer: bytes) -> None:
-        # Même structure que Login - broadcast/discovery response
+    # Same structure as Login - broadcast/discovery response
         pass
 
 @register_datagram
 class LoginConfirm(Datagram):
-    """0x8001 (32769) - Confirmation de connexion (App → EVSE)"""
+    """0x8001 (32769) - Login confirmation (App → EVSE)"""
     COMMAND = 32769
     
     def pack_payload(self) -> bytes:
-        return b'\x00'  # Un byte 0x00 selon TypeScript
+        return b'\x00'  # One byte 0x00 as per TypeScript
     
     def unpack_payload(self, buffer: bytes) -> None:
         pass
 
 @register_datagram
 class PasswordErrorResponse(Datagram):
-    """0x0155 (341) - Erreur de mot de passe (EVSE → App)"""
+    """0x0155 (341) - Password error (EVSE → App)"""
     COMMAND = 341
     
     def pack_payload(self) -> bytes:
@@ -203,13 +203,13 @@ class PasswordErrorResponse(Datagram):
     def unpack_payload(self, buffer: bytes) -> None:
         pass
 
-# ============================================================================
-# COMMANDES DE SESSION
-# ============================================================================
+###############################################################################
+# SESSION COMMANDS
+###############################################################################
 
 @register_datagram
 class Heading(Datagram):
-    """0x0003 - Heartbeat pour maintenir session (App → EVSE)"""
+    """0x0003 - Heartbeat to maintain session (App → EVSE)"""
     COMMAND = 0x0003
     
     def pack_payload(self) -> bytes:
@@ -220,7 +220,7 @@ class Heading(Datagram):
 
 @register_datagram  
 class HeadingResponse(Datagram):
-    """0x8003 (32771) - Réponse heartbeat (EVSE → App)"""
+    """0x8003 (32771) - Heartbeat response (EVSE → App)"""
     COMMAND = 32771
     
     def pack_payload(self) -> bytes:
@@ -229,13 +229,13 @@ class HeadingResponse(Datagram):
     def unpack_payload(self, buffer: bytes) -> None:
         pass
 
-# ============================================================================
-# COMMANDES DE CONFIGURATION
-# ============================================================================
+###############################################################################
+# CONFIGURATION COMMANDS
+###############################################################################
 
 @register_datagram
 class SetAndGetChargeFeeResponse(Datagram):
-    """0x0104 (260) - Réponse tarif de charge (EVSE → App)"""
+    """0x0104 (260) - Charge fee response (EVSE → App)"""
     COMMAND = 260
     
     def __init__(self):
@@ -253,7 +253,7 @@ class SetAndGetChargeFeeResponse(Datagram):
 
 @register_datagram
 class GetVersion(Datagram):
-    """0x8106 (33030) - Demander version (App → EVSE)"""
+    """0x8106 (33030) - Request version (App → EVSE)"""
     COMMAND = 33030
     
     def pack_payload(self) -> bytes:
@@ -264,7 +264,7 @@ class GetVersion(Datagram):
 
 @register_datagram
 class GetVersionResponse(Datagram):
-    """0x0106 (262) - Réponse version (EVSE → App)"""
+    """0x0106 (262) - Version response (EVSE → App)"""
     COMMAND = 262
     
     def __init__(self):
@@ -290,96 +290,96 @@ class GetVersionResponse(Datagram):
 
 @register_datagram
 class ChargeStart(Datagram):
-    """0x8007 (32775) - Démarrer charge (App → EVSE)"""
+    """0x8007 (32775) - Start charging (App → EVSE)"""
     COMMAND = 32775
     
     def __init__(self):
         super().__init__()
-        self.line_id: int = 1
-        self.user_id: str = "emmgr"
-        self.charge_id: str = ""
-        self.reservation_date: int = 0  # timestamp
-        self.start_type: int = 1
-        self.charge_type: int = 1
-        self.max_duration_minutes: int = 65535
-        self.max_energy_kwh: int = 65535  # en centièmes de kWh
-        self.param3: int = 65535
-        self.max_electricity: int = 6  # Ampères
-        self.single_phase: bool = False
+        self.line_id = 1
+        self.user_id = "emmgr"
+        self.charge_id = ""
+        self.reservation_date = 0  # timestamp
+        self.start_type = 1
+        self.charge_type = 1
+        self.max_duration_minutes = 65535
+        self.max_energy_kwh = 65535  # in hundredths of kWh
+        self.param3 = 65535
+        self.max_electricity = 6  # Amperes
+        self.single_phase = False
     
     def pack_payload(self) -> bytes:
-        # Buffer de 47 bytes selon TypeScript
+        # 47-byte buffer according to TypeScript
         buffer = bytearray(47)
-        
-        # Valeurs de sécurité
+
+        # Safety values
         if not (6 <= self.max_electricity <= 32):
             raise ValueError("maxElectricity must be 6-32A")
-        
-        # Générer un charge_id si vide
+
+        # Generate a charge_id if empty
         if not self.charge_id:
             import time
             self.charge_id = f"{int(time.time())}"[:12].ljust(16, '0')
-        
-        # Timestamp actuel si pas de réservation
+
+        # Current timestamp if no reservation
         if self.reservation_date == 0:
             import time
             self.reservation_date = int(time.time())
-        
-        # Remplir le buffer
+
+        # Fill the buffer
         buffer[0] = self.line_id
-        
+
         # userId (16 bytes)
         user_bytes = self.user_id.encode('ascii')[:16]
         buffer[1:1+len(user_bytes)] = user_bytes
-        
-        # chargeId (16 bytes) 
+
+        # chargeId (16 bytes)
         charge_bytes = self.charge_id.encode('ascii')[:16]
         buffer[17:17+len(charge_bytes)] = charge_bytes
-        
-        # isReservation (0 = immédiat)
+
+        # isReservation (0 = immediate)
         buffer[33] = 0
-        
+
         # reservationDate (4 bytes, big endian)
         import struct
         buffer[34:38] = struct.pack('>I', self.reservation_date)
-        
+
         # startType, chargeType
         buffer[38] = self.start_type
         buffer[39] = self.charge_type
-        
+
         # params (big endian)
         buffer[40:42] = struct.pack('>H', self.max_duration_minutes)
         buffer[42:44] = struct.pack('>H', self.max_energy_kwh)
         buffer[44:46] = struct.pack('>H', self.param3)
-        
+
         # maxElectricity
         buffer[46] = self.max_electricity
-        
+
         return bytes(buffer)
     
     def unpack_payload(self, buffer: bytes) -> None:
-        pass  # App → EVSE seulement
+        pass  # App → EVSE only
     
     def set_max_electricity(self, amps: int):
-        """Définir le courant maximum"""
+        """Set the maximum current"""
         self.max_electricity = amps
         
     def set_single_phase(self, single_phase: bool):
-        """Définir le mode monophasé"""
+        """Set single-phase mode"""
         self.single_phase = single_phase
-        # Note: À implémenter si le protocole le supporte
+        # Note: To be implemented if the protocol supports it
         
     def set_user_id(self, user_id: str):
-        """Définir l'ID utilisateur"""
-        self.user_id = user_id[:16]  # Limite à 16 caractères
+        """Set user ID"""
+        self.user_id = user_id[:16]  # Limit to 16 characters
         
     def set_charge_id(self, charge_id: str):
-        """Définir l'ID de charge"""
-        self.charge_id = charge_id[:16]  # Limite à 16 caractères
+        """Set charge ID"""
+        self.charge_id = charge_id[:16]  # Limit to 16 characters
 
 @register_datagram
 class ChargeStartResponse(Datagram):
-    """0x0007 - Réponse démarrage charge (EVSE → App)"""
+    """0x0007 - Start charge response (EVSE → App)"""
     COMMAND = 7
     
     def pack_payload(self) -> bytes:
@@ -390,7 +390,7 @@ class ChargeStartResponse(Datagram):
 
 @register_datagram
 class ChargeStop(Datagram):
-    """0x8008 (32776) - Arrêter charge (App → EVSE)"""
+    """0x8008 (32776) - Stop charging (App → EVSE)"""
     COMMAND = 32776
     
     def pack_payload(self) -> bytes:
@@ -401,7 +401,7 @@ class ChargeStop(Datagram):
 
 @register_datagram
 class ChargeStopResponse(Datagram):
-    """0x0008 - Réponse arrêt charge (EVSE → App)"""
+    """0x0008 - Stop charge response (EVSE → App)"""
     COMMAND = 8
     
     def pack_payload(self) -> bytes:
@@ -411,43 +411,43 @@ class ChargeStopResponse(Datagram):
         pass
 
 # ============================================================================
-# COMMANDES D'HISTORIQUE
+ # HISTORY COMMANDS
 # ============================================================================
 
 @register_datagram
 class CurrentChargeRecord(Datagram):
-    """0x0009 - Enregistrement charge actuel (EVSE → App)"""
+    """0x0009 - Current charge record (EVSE → App)"""
     COMMAND = 9
     
     def __init__(self):
         super().__init__()
-        self.line_id: int = 1
-        self.start_user_id: str = ""
-        self.end_user_id: str = ""
-        self.charge_id: str = ""
-        self.has_reservation: int = 0
-        self.start_type: int = 0
-        self.charge_type: int = 0
-        self.charge_param1: int = 0
-        self.charge_param2: float = 0.0
-        self.charge_param3: float = 0.0
-        self.stop_reason: int = 0
-        self.has_stop_charge: int = 0
-        self.reservation_data: int = 0
-        self.start_date: int = 0
-        self.stop_date: int = 0
-        self.charged_time: int = 0
-        self.charge_start_power: float = 0.0
-        self.charge_stop_power: float = 0.0
-        self.charge_power: float = 0.0
-        self.charge_price: float = 0.0
-        self.fee_type: int = 0
-        self.charge_fee: float = 0.0
-        self.log_kw_length: int = 0
-        self.log_kw: List[int] = []
-        self.log_charge_data_kwh: List[int] = []
-        self.log_charge_data_charge_fee: List[int] = []
-        self.log_charge_data_service_fee: List[int] = []
+        self.line_id = 1
+        self.start_user_id = ""
+        self.end_user_id = ""
+        self.charge_id = ""
+        self.has_reservation = 0
+        self.start_type = 0
+        self.charge_type = 0
+        self.charge_param1 = 0
+        self.charge_param2 = 0.0
+        self.charge_param3 = 0.0
+        self.stop_reason = 0
+        self.has_stop_charge = 0
+        self.reservation_data = 0
+        self.start_date = 0
+        self.stop_date = 0
+        self.charged_time = 0
+        self.charge_start_power = 0.0
+        self.charge_stop_power = 0.0
+        self.charge_power = 0.0
+        self.charge_price = 0.0
+        self.fee_type = 0
+        self.charge_fee = 0.0
+        self.log_kw_length = 0
+        self.log_kw = []
+        self.log_charge_data_kwh = []
+        self.log_charge_data_charge_fee = []
+        self.log_charge_data_service_fee = []
     
     def pack_payload(self) -> bytes:
         return b''
@@ -503,7 +503,7 @@ class CurrentChargeRecord(Datagram):
 
 @register_datagram
 class RequestChargeStatusRecord(Datagram):
-    """0x8009 (32777) - Demander historique (App → EVSE)"""
+    """0x8009 (32777) - Request history (App → EVSE)"""
     COMMAND = 32777
     
     def pack_payload(self) -> bytes:
@@ -514,7 +514,7 @@ class RequestChargeStatusRecord(Datagram):
 
 @register_datagram
 class RequestStatusRecord(Datagram):
-    """0x000d (13) - Demander statut (obsolète ?)"""
+    """0x000d (13) - Request status (obsolete?)"""
     COMMAND = 13
     
     def pack_payload(self) -> bytes:
@@ -524,38 +524,38 @@ class RequestStatusRecord(Datagram):
         pass
 
 # ============================================================================
-# COMMANDES DE STATUT DE CHARGE
+ # CHARGE STATUS COMMANDS
 # ============================================================================
 
 @register_datagram
 class SingleACChargingStatusPublicAuto(Datagram):
-    """0x0005 (5) - Statut de charge automatique AC (EVSE → App)"""
+    """0x0005 (5) - Automatic AC charging status (EVSE → App)"""
     COMMAND = 5
     
     def __init__(self):
         super().__init__()
-        self.port: int = 0
-        self.current_state: int = 0  # 13=finished, 14=charging
-        self.charge_id: str = ""
-        self.start_type: int = 0
-        self.charge_type: int = 0
-        self.max_duration_minutes: Optional[int] = None
-        self.max_energy_kwh: Optional[float] = None
-        self.charge_param3: Optional[float] = None
-        self.reservation_date: int = 0  # timestamp
-        self.user_id: str = ""
-        self.max_electricity: int = 0
-        self.start_date: int = 0  # timestamp
-        self.duration_seconds: int = 0
-        self.start_kwh_counter: float = 0.0
-        self.current_kwh_counter: float = 0.0
-        self.charge_kwh: float = 0.0
-        self.charge_price: float = 0.0
-        self.fee_type: int = 0
-        self.charge_fee: float = 0.0
+        self.port = 0
+        self.current_state = 0  # 13=finished, 14=charging
+        self.charge_id = ""
+        self.start_type = 0
+        self.charge_type = 0
+        self.max_duration_minutes = None
+        self.max_energy_kwh = None
+        self.charge_param3 = None
+        self.reservation_date = 0  # timestamp
+        self.user_id = ""
+        self.max_electricity = 0
+        self.start_date = 0  # timestamp
+        self.duration_seconds = 0
+        self.start_kwh_counter = 0.0
+        self.current_kwh_counter = 0.0
+        self.charge_kwh = 0.0
+        self.charge_price = 0.0
+        self.fee_type = 0
+        self.charge_fee = 0.0
     
     def pack_payload(self) -> bytes:
-        return b''  # App ne génère pas ce message
+        return b''  # App does not generate this message
     
     def unpack_payload(self, buffer: bytes) -> None:
         if len(buffer) < 74:
@@ -563,7 +563,7 @@ class SingleACChargingStatusPublicAuto(Datagram):
             
         self.port = struct.unpack('B', buffer[0:1])[0]
         
-        # État de charge (avec gestion de position variable selon TypeScript)
+    # Charging state (with variable position handling according to TypeScript)
         if len(buffer) <= 74 or buffer[74] not in [18, 19]:
             self.current_state = struct.unpack('B', buffer[1:2])[0]
         else:
@@ -573,15 +573,15 @@ class SingleACChargingStatusPublicAuto(Datagram):
         self.start_type = struct.unpack('B', buffer[18:19])[0]
         self.charge_type = struct.unpack('B', buffer[19:20])[0]
         
-        # Durée max (65535 = non défini)
+    # Max duration (65535 = undefined)
         max_duration_raw = struct.unpack('>H', buffer[20:22])[0]
         self.max_duration_minutes = None if max_duration_raw == 65535 else max_duration_raw
         
-        # Énergie max (65535 = non défini) 
+    # Max energy (65535 = undefined)
         max_energy_raw = struct.unpack('>H', buffer[22:24])[0]
         self.max_energy_kwh = None if max_energy_raw == 65535 else max_energy_raw * 0.01
         
-        # Paramètre 3 (65535 = non défini)
+    # Parameter 3 (65535 = undefined)
         param3_raw = struct.unpack('>H', buffer[24:26])[0]
         self.charge_param3 = None if param3_raw == 65535 else param3_raw * 0.01
         
@@ -599,50 +599,50 @@ class SingleACChargingStatusPublicAuto(Datagram):
 
 @register_datagram
 class SingleACChargingStatusResponse(Datagram):
-    """0x0006 (6) - Réponse au statut de charge (App → EVSE)"""
+    """0x0006 (6) - Charge status response (App → EVSE)"""
     COMMAND = 6
     
     def pack_payload(self) -> bytes:
-        return b'\x00'  # Accusé de réception simple
+        return b'\x00'  # Simple acknowledgment
     
     def unpack_payload(self, buffer: bytes) -> None:
         pass
 
 # ============================================================================
-# COMMANDES MANQUANTES IMPORTANTES (selon TypeScript)
+ # IMPORTANT MISSING COMMANDS (according to TypeScript)
 # ============================================================================
 
 @register_datagram
 class UploadLocalChargeRecord(Datagram):
-    """0x000a (10) - Upload d'enregistrement de charge local (EVSE → App)"""
+    """0x000a (10) - Upload local charge record (EVSE → App)"""
     COMMAND = 10
     
     def pack_payload(self) -> bytes:
-        return b''  # App ne génère pas ce message
+        return b''  # App does not generate this message
     
     def unpack_payload(self, buffer: bytes) -> None:
-        pass  # Traitement simplifié
+        pass  # Simplified processing
 
 @register_datagram
 class CurrentChargeRecordResponse(Datagram):
-    """0x800d (32781) - Réponse à l'enregistrement de charge actuel (App → EVSE)"""
+    """0x800d (32781) - Current charge record response (App → EVSE)"""
     COMMAND = 32781
     
     def pack_payload(self) -> bytes:
-        return b'\x00'  # Accusé de réception simple
+        return b'\x00'  # Simple acknowledgment
     
     def unpack_payload(self, buffer: bytes) -> None:
         pass
 
 @register_datagram
 class SetAndGetOutputElectricity(Datagram):
-    """0x8107 (33031) - Définir/Obtenir courant de sortie (App → EVSE)"""
+    """0x8107 (33031) - Set/Get output current (App → EVSE)"""
     COMMAND = 33031
     
     def __init__(self):
         super().__init__()
-        self.action: int = 0  # 0=GET, 1=SET
-        self.electricity: int = 6  # Ampères (6-32A)
+        self.action = 0  # 0=GET, 1=SET
+        self.electricity = 6  # Amperes (6-32A)
     
     def pack_payload(self) -> bytes:
         buffer = bytearray([self.action, 0x00])
@@ -659,16 +659,16 @@ class SetAndGetOutputElectricity(Datagram):
 
 @register_datagram
 class SetAndGetOutputElectricityResponse(Datagram):
-    """0x0107 (263) - Réponse courant de sortie (EVSE → App)"""
+    """0x0107 (263) - Output current response (EVSE → App)"""
     COMMAND = 263
     
     def __init__(self):
         super().__init__()
-        self.action: int = 0  # 0=GET, 1=SET
-        self.electricity: int = 16  # Ampères (6-32A)
+        self.action = 0  # 0=GET, 1=SET
+        self.electricity = 16  # Amperes (6-32A)
     
     def pack_payload(self) -> bytes:
-        return b''  # App ne génère pas ce message
+        return b''  # App does not generate this message
     
     def unpack_payload(self, buffer: bytes) -> None:
         if len(buffer) >= 2:
@@ -681,7 +681,7 @@ class SetAndGetSystemTime(Datagram):
     COMMAND = 33025
     
     def pack_payload(self) -> bytes:
-        # Envoyer timestamp Unix actuel
+    # Send current Unix timestamp
         import time
         timestamp = int(time.time())
         return struct.pack('>I', timestamp)
@@ -691,15 +691,15 @@ class SetAndGetSystemTime(Datagram):
 
 @register_datagram
 class SetAndGetSystemTimeResponse(Datagram):
-    """0x0101 (257) - Réponse heure système (EVSE → App)"""
+    """0x0101 (257) - System time response (EVSE → App)"""
     COMMAND = 257
     
     def __init__(self):
         super().__init__()
-        self.timestamp: int = 0
+        self.timestamp = 0
     
     def pack_payload(self) -> bytes:
-        return b''  # App ne génère pas ce message
+        return b''  # App does not generate this message
     
     def unpack_payload(self, buffer: bytes) -> None:
         if len(buffer) >= 4:
@@ -707,7 +707,7 @@ class SetAndGetSystemTimeResponse(Datagram):
 
 @register_datagram
 class SetAndGetOffLineCharge(Datagram):
-    """0x810d (33037) - Définir/Obtenir charge hors ligne (App → EVSE)"""
+    """0x810d (33037) - Set/Get offline charge (App → EVSE)"""
     COMMAND = 33037
     
     def __init__(self):
@@ -723,15 +723,15 @@ class SetAndGetOffLineCharge(Datagram):
 
 @register_datagram
 class SetAndGetOffLineChargeResponse(Datagram):
-    """0x010c (268) - Réponse charge hors ligne (EVSE → App)"""
+    """0x010c (268) - Offline charge response (EVSE → App)"""
     COMMAND = 268
     
     def __init__(self):
         super().__init__()
-        self.offline_enabled: bool = False
+        self.offline_enabled = False
     
     def pack_payload(self) -> bytes:
-        return b''  # App ne génère pas ce message
+        return b''  # App does not generate this message
     
     def unpack_payload(self, buffer: bytes) -> None:
         if len(buffer) >= 1:

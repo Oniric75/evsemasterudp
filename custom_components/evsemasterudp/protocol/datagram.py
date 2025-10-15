@@ -1,5 +1,5 @@
 """
-Classe de base pour les datagrammes EVSE EmProto
+Base class for EmProto EVSE datagrams
 """
 import struct
 from abc import ABC, abstractmethod
@@ -9,7 +9,7 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 class Datagram(ABC):
-    """Classe de base pour tous les datagrammes EVSE"""
+    """Base class for all EVSE datagrams"""
     
     COMMAND: int = 0
     PACKET_HEADER = 0x0601
@@ -21,141 +21,141 @@ class Datagram(ABC):
         self.device_password: Optional[str] = None
     
     def get_command(self) -> int:
-        """Obtenir le numéro de commande du datagramme"""
+        """Get the datagram command number"""
         return self.__class__.COMMAND
     
     @abstractmethod
     def pack_payload(self) -> bytes:
-        """Empaqueter le payload spécifique au datagramme"""
+        """Pack the datagram-specific payload"""
         pass
-    
+
     @abstractmethod
     def unpack_payload(self, buffer: bytes) -> None:
-        """Désempaqueter le payload spécifique au datagramme"""
+        """Unpack the datagram-specific payload"""
         pass
     
     def pack(self) -> bytes:
-        """Empaqueter le datagramme complet"""
+        """Pack the complete datagram"""
         command = self.get_command()
         if not command:
-            raise ValueError(f"Commande manquante pour le type {self.__class__.__name__}")
+            raise ValueError(f"Missing command for type {self.__class__.__name__}")
         
         payload = self.pack_payload()
         
-        # Créer le buffer complet (25 bytes header + payload)
+    # Create the full buffer (25 bytes header + payload)
         buffer_size = 25 + len(payload)
         buffer = bytearray(buffer_size)
         
-        # Header (2 bytes)
+    # Header (2 bytes)
         struct.pack_into('>H', buffer, 0, self.PACKET_HEADER)
         
-        # Length (2 bytes)
+    # Length (2 bytes)
         struct.pack_into('>H', buffer, 2, buffer_size)
         
-        # Key type (1 byte)
+    # Key type (1 byte)
         struct.pack_into('B', buffer, 4, self.key_type)
         
-        # Device serial (8 bytes hex)
+    # Device serial (8 bytes hex)
         if self.device_serial:
             serial_bytes = bytes.fromhex(self.device_serial)
             buffer[5:5+len(serial_bytes)] = serial_bytes
         
-        # Device password (6 bytes ASCII)
+    # Device password (6 bytes ASCII)
         if self.device_password is not None:
             password_bytes = self.device_password.encode('ascii')[:6]
             buffer[13:13+len(password_bytes)] = password_bytes
         
-        # Command (2 bytes)
+    # Command (2 bytes)
         struct.pack_into('>H', buffer, 19, command)
         
-        # Payload
+    # Payload
         buffer[21:21+len(payload)] = payload
         
-        # Checksum (2 bytes) - somme de tous les bytes sauf les 4 derniers
+    # Checksum (2 bytes) - sum of all bytes except the last 4
         checksum = sum(buffer[:-4]) % 0xFFFF
         struct.pack_into('>H', buffer, buffer_size - 4, checksum)
         
-        # Tail (2 bytes)
+    # Tail (2 bytes)
         struct.pack_into('>H', buffer, buffer_size - 2, self.PACKET_TAIL)
         
         return bytes(buffer)
     
     def unpack(self, buffer: bytes) -> int:
-        """Désempaqueter un datagramme depuis un buffer"""
+        """Unpack a datagram from a buffer"""
         payload_length = self._validate_datagram(buffer)
         
         command = struct.unpack('>H', buffer[19:21])[0]
         if command != self.get_command():
-            raise ValueError(f"Commande inattendue {command} pour le type {self.__class__.__name__}")
+            raise ValueError(f"Unexpected command {command} for type {self.__class__.__name__}")
         
         self.key_type = buffer[4]
         self.device_serial = buffer[5:13].hex()
         
-        # Password (peut être null)
+    # Password (may be null)
         password_bytes = buffer[13:19]
         if all(b == 0 for b in password_bytes):
             self.device_password = None
         else:
             self.device_password = password_bytes.decode('ascii', errors='ignore').rstrip('\x00')
         
-        # Extraire et désempaqueter le payload
+    # Extract and unpack the payload
         payload = buffer[21:21 + payload_length]
         self.unpack_payload(payload)
         
         return payload_length + 25
     
     def _validate_datagram(self, buffer: bytes) -> int:
-        """Valider le datagramme et retourner la longueur du payload"""
+        """Validate the datagram and return the payload length"""
         if len(buffer) < 25:
-            raise ValueError("Datagramme trop court")
+            raise ValueError("Datagram too short")
         
         header = struct.unpack('>H', buffer[0:2])[0]
         if header != self.PACKET_HEADER:
-            raise ValueError("Header magique manquant")
+            raise ValueError("Missing magic header")
         
         length = struct.unpack('>H', buffer[2:4])[0]
         if length > len(buffer):
-            raise ValueError("Longueur invalide")
+            raise ValueError("Invalid length")
         
-        # Vérifier le checksum
+        # Verify checksum
         computed_checksum = sum(buffer[:length-4]) % 0xFFFF
         checksum = struct.unpack('>H', buffer[length-4:length-2])[0]
         if computed_checksum != checksum:
-            raise ValueError("Checksum invalide")
+            raise ValueError("Invalid checksum")
         
         return length - 25
     
     def read_string(self, buffer: bytes, offset: int, length: int) -> str:
-        """Lire une chaîne depuis le buffer"""
+        """Read a string from the buffer"""
         end = offset + length
         string_bytes = buffer[offset:end]
-        # Retirer les bytes null à la fin
+    # Remove trailing null bytes
         null_pos = string_bytes.find(b'\x00')
         if null_pos != -1:
             string_bytes = string_bytes[:null_pos]
         return string_bytes.decode('ascii', errors='ignore')
     
     def read_temperature(self, buffer: bytes, offset: int) -> float:
-        """Lire une température depuis le buffer"""
+        """Read a temperature from the buffer"""
         temp_raw = struct.unpack('>H', buffer[offset:offset+2])[0]
         return (temp_raw - 100) / 10.0
     
     def set_device_serial(self, serial: str) -> 'Datagram':
-        """Définir le numéro de série de l'appareil"""
+        """Set the device serial number"""
         self.device_serial = serial
         return self
     
     def set_device_password(self, password: Optional[str]) -> 'Datagram':
-        """Définir le mot de passe de l'appareil"""
+        """Set the device password"""
         self.device_password = password
         return self
     
     def get_device_serial(self) -> Optional[str]:
-        """Obtenir le numéro de série de l'appareil"""
+        """Get the device serial number"""
         return self.device_serial
     
     def get_device_password(self) -> Optional[str]:
-        """Obtenir le mot de passe de l'appareil"""
+        """Get the device password"""
         return self.device_password
     
     def __str__(self) -> str:
@@ -163,7 +163,7 @@ class Datagram(ABC):
 
 
 class UnknownCommandBase(Datagram):
-    """Classe de base pour les commandes inconnues"""
+    """Base class for unknown commands"""
     COMMAND = 0x0000  # Sera remplacé dynamiquement
     
     def __init__(self):
@@ -171,54 +171,54 @@ class UnknownCommandBase(Datagram):
         self.raw_data: bytes = b''
     
     def pack_payload(self) -> bytes:
-        # Retourner les données brutes telles quelles
+        # Return raw data as-is
         return self.raw_data
-    
+
     def unpack_payload(self, buffer: bytes) -> None:
-        # Conserver les données brutes pour debug
+        # Keep raw data for debugging
         self.raw_data = buffer
 
 
-# Registre des types de datagrammes
+# Registry of datagram types
 DATAGRAM_TYPES: Dict[int, Type[Datagram]] = {}
 
 def register_datagram(cls: Type[Datagram]) -> Type[Datagram]:
-    """Décorateur pour enregistrer un type de datagramme"""
+    """Decorator to register a datagram type"""
     if cls.COMMAND in DATAGRAM_TYPES:
         existing = DATAGRAM_TYPES[cls.COMMAND]
-        raise ValueError(f"Commande {cls.COMMAND} déjà utilisée par {existing.__name__}")
+        raise ValueError(f"Command {cls.COMMAND} already used by {existing.__name__}")
     DATAGRAM_TYPES[cls.COMMAND] = cls
     return cls
 
 def parse_datagrams(buffer: bytes) -> List[Datagram]:
-    """Parser plusieurs datagrammes depuis un buffer"""
+    """Parse multiple datagrams from a buffer"""
     datagrams = []
     offset = 0
-    
+
     while len(buffer) - offset >= 25:
-        # Vérifier le header
+        # Check header
         header = struct.unpack('>H', buffer[offset:offset+2])[0]
         if header != Datagram.PACKET_HEADER:
-            _LOGGER.warning(f"Header magique manquant: {header:04x}")
+            _LOGGER.warning(f"Missing magic header: {header:04x}")
             break
-        
-        # Obtenir la commande
+
+        # Get command
         command = struct.unpack('>H', buffer[offset+19:offset+21])[0]
         datagram_class = DATAGRAM_TYPES.get(command)
-        
+
         if not datagram_class:
-            _LOGGER.warning(f"Commande inconnue reçue: {command} (0x{command:04x}) - Peut-être une nouvelle commande EVSE non encore implémentée")
-            # Créer une classe générique pour les commandes inconnues
+            _LOGGER.warning(f"Unknown command received: {command} (0x{command:04x}) - Possibly a new EVSE command not yet implemented")
+            # Create a generic class for unknown commands
             datagram_class = type(f'UnknownCommand{command}', (UnknownCommandBase,), {'COMMAND': command})
-        
-        # Créer et désempaqueter le datagramme
+
+        # Create and unpack the datagram
         try:
             datagram = datagram_class()
             length = datagram.unpack(buffer[offset:])
             datagrams.append(datagram)
             offset += length
         except Exception as e:
-            _LOGGER.error(f"Erreur lors du parsing du datagramme {command}: {e}")
+            _LOGGER.error(f"Error while parsing datagram {command}: {e}")
             break
-    
+
     return datagrams

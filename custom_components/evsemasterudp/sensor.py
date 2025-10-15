@@ -1,4 +1,4 @@
-"""Capteurs pour l'intégration EVSE EmProto"""
+"""Sensors for the EVSE EmProto integration"""
 from __future__ import annotations
 
 from homeassistant.components.sensor import (
@@ -25,14 +25,14 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Configurer les capteurs EVSE"""
+    """Set up EVSE sensors"""
     
     data = hass.data[DOMAIN][config_entry.entry_id]
     coordinator = data["coordinator"]
     serial = data["serial"]
     base_name = data.get("base_name", f"EVSE {serial}")
     
-    # Créer les capteurs
+    # Create sensors
     client = data["client"]
     entities = [
         EVSEStateSensor(coordinator, serial, base_name),
@@ -48,7 +48,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 class EVSEBaseSensor(CoordinatorEntity, SensorEntity):
-    """Capteur de base pour EVSE"""
+    """Base sensor for EVSE"""
     
     def __init__(self, coordinator, serial: str, base_name: str):
         super().__init__(coordinator)
@@ -63,16 +63,16 @@ class EVSEBaseSensor(CoordinatorEntity, SensorEntity):
     
     @property
     def evse_data(self):
-        """Obtenir les données de l'EVSE"""
+        """Get EVSE data"""
         return self.coordinator.data.get(self.serial, {})
 
 class EVSEChargeStatusSensor(EVSEBaseSensor):
-    """Simple binaire (charging / idle)."""
+    """Simple binary (charging / idle)."""
 
     def __init__(self, coordinator, serial: str, base_name: str, client):
         super().__init__(coordinator, serial, base_name)
         self.client = client
-        self._attr_name = f"{base_name} Charge Statut"
+        self._attr_name = f"{base_name} Charge Status"
         self._attr_unique_id = f"{serial}_charge_status"
         self._attr_icon = "mdi:ev-station"
 
@@ -81,7 +81,7 @@ class EVSEChargeStatusSensor(EVSEBaseSensor):
         data = self.evse_data
         if not data:
             return None
-        # Déterminer si en charge : meta-state CHARGING ou output_state==1 ou puissance significative
+    # Determine if charging: meta-state CHARGING or output_state==1 or significant power
         current_power = data.get("current_power", 0) or 0
         charging = bool(
             data.get("state") == "CHARGING" or
@@ -92,10 +92,10 @@ class EVSEChargeStatusSensor(EVSEBaseSensor):
         if charging:
             return "charging"
 
-        # Vérifier protection cooldown
+        # Check cooldown protection
         remaining = self.client.get_cooldown_remaining(self.serial)
         if remaining.total_seconds() > 0:
-            return "soft_protection"  # mode protection anti-cycles
+            return "soft_protection"  # anti-cycle protection mode
         return "not_charging"
 
     @property
@@ -106,17 +106,17 @@ class EVSEChargeStatusSensor(EVSEBaseSensor):
         }
 
 class EVSEStateSensor(EVSEBaseSensor):
-    """Capteur d'état de l'EVSE"""
+    """EVSE state sensor"""
     
     def __init__(self, coordinator, serial: str, base_name: str):
         super().__init__(coordinator, serial, base_name)
-        self._attr_name = f"{base_name} État"
+        self._attr_name = f"{base_name} State"
         self._attr_unique_id = f"{serial}_state"
         self._attr_icon = "mdi:ev-station"
     
     @property
     def native_value(self) -> str | None:
-        """Retourner l'état de l'EVSE"""
+        """Return the EVSE state"""
         data = self.evse_data
         if not data.get("online"):
             return "offline"
@@ -124,7 +124,7 @@ class EVSEStateSensor(EVSEBaseSensor):
     
     @property
     def extra_state_attributes(self):
-        """Attributs supplémentaires"""
+        """Additional attributes"""
         data = self.evse_data
         return {
             "online": data.get("online", False),
@@ -134,11 +134,11 @@ class EVSEStateSensor(EVSEBaseSensor):
         }
 
 class EVSEPowerSensor(EVSEBaseSensor):
-    """Capteur de puissance de l'EVSE"""
+    """EVSE power sensor"""
     
     def __init__(self, coordinator, serial: str, base_name: str):
         super().__init__(coordinator, serial, base_name)
-        self._attr_name = f"{base_name} Puissance"
+        self._attr_name = f"{base_name} Power"
         self._attr_unique_id = f"{serial}_power"
         self._attr_device_class = SensorDeviceClass.POWER
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -147,16 +147,16 @@ class EVSEPowerSensor(EVSEBaseSensor):
     
     @property
     def native_value(self) -> float | None:
-        """Retourner la puissance actuelle"""
+        """Return the current power"""
         data = self.evse_data
         return data.get("current_power", 0)
 
 class EVSECurrentSensor(EVSEBaseSensor):
-    """Capteur de courant de l'EVSE"""
+    """EVSE current sensor"""
     
     def __init__(self, coordinator, serial: str, base_name: str):
         super().__init__(coordinator, serial, base_name)
-        self._attr_name = f"{base_name} Courant"
+        self._attr_name = f"{base_name} Current"
         self._attr_unique_id = f"{serial}_current"
         self._attr_device_class = SensorDeviceClass.CURRENT
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -165,16 +165,16 @@ class EVSECurrentSensor(EVSEBaseSensor):
     
     @property
     def native_value(self) -> float | None:
-        """Retourner le courant actuel"""
+        """Return the current"""
         data = self.evse_data
         return data.get("current_l1", 0)
 
 class EVSEVoltageSensor(EVSEBaseSensor):
-    """Capteur de tension de l'EVSE"""
+    """EVSE voltage sensor"""
     
     def __init__(self, coordinator, serial: str, base_name: str):
         super().__init__(coordinator, serial, base_name)
-        self._attr_name = f"{base_name} Tension"
+        self._attr_name = f"{base_name} Voltage"
         self._attr_unique_id = f"{serial}_voltage"
         self._attr_device_class = SensorDeviceClass.VOLTAGE
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -183,16 +183,16 @@ class EVSEVoltageSensor(EVSEBaseSensor):
     
     @property
     def native_value(self) -> float | None:
-        """Retourner la tension actuelle"""
+        """Return the current voltage"""
         data = self.evse_data
         return data.get("voltage_l1", 0)
 
 class EVSEEnergySensor(EVSEBaseSensor):
-    """Capteur d'énergie de l'EVSE"""
+    """EVSE energy sensor"""
     
     def __init__(self, coordinator, serial: str, base_name: str):
         super().__init__(coordinator, serial, base_name)
-        self._attr_name = f"{base_name} Énergie"
+        self._attr_name = f"{base_name} Energy"
         self._attr_unique_id = f"{serial}_energy"
         self._attr_device_class = SensorDeviceClass.ENERGY
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
@@ -201,17 +201,17 @@ class EVSEEnergySensor(EVSEBaseSensor):
     
     @property
     def native_value(self) -> float | None:
-        """Retourner l'énergie consommée"""
+        """Return the consumed energy"""
         data = self.evse_data
         return data.get("charge_kwh", 0)
 
 class EVSETemperatureSensor(EVSEBaseSensor):
-    """Capteur de température de l'EVSE"""
+    """EVSE temperature sensor"""
     
     def __init__(self, coordinator, serial: str, base_name: str, temp_type: str):
         super().__init__(coordinator, serial, base_name)
         self.temp_type = temp_type
-        self._attr_name = f"{base_name} Température {temp_type.title()}"
+        self._attr_name = f"{base_name} Temperature {temp_type.title()}"
         self._attr_unique_id = f"{serial}_temperature_{temp_type}"
         self._attr_device_class = SensorDeviceClass.TEMPERATURE
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -220,6 +220,6 @@ class EVSETemperatureSensor(EVSEBaseSensor):
     
     @property
     def native_value(self) -> float | None:
-        """Retourner la température"""
+        """Return the temperature"""
         data = self.evse_data
         return data.get(f"temperature_{self.temp_type}", 0)
