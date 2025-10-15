@@ -1,4 +1,4 @@
-"""Config flow pour l'intégration EVSE Master UDP"""
+"""Config flow for the EVSE Master UDP integration"""
 from __future__ import annotations
 
 import logging
@@ -28,29 +28,29 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Gestionnaire du flux de configuration pour EVSE EmProto"""
+    """Configuration flow manager for EVSE EmProto"""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Gérer l'étape initiale de configuration par l'utilisateur"""
+        """Handle the initial user configuration step"""
         errors: dict[str, str] = {}
 
         if user_input is not None:
             try:
-                # Valider la configuration
+                # Validate configuration
                 info = await validate_input(self.hass, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
             except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Erreur inattendue")
+                _LOGGER.exception("Unexpected error")
                 errors["base"] = "unknown"
             else:
-                # Créer l'entrée de configuration
+                # Create the configuration entry
                 return self.async_create_entry(title=info["title"], data=user_input)
 
         return self.async_show_form(
@@ -58,55 +58,55 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """Valider les données d'entrée utilisateur"""
+    """Validate user input data"""
     
     serial = data["serial"]
     password = data["password"]
     port = data.get("port", 28376)
     
-    # Obtenir le client EVSE
+    # Get the EVSE client
     client = get_evse_client()
     
-    # Démarrer le client temporairement pour tester
+    # Start the client temporarily for testing
     was_running = client.running
     if not was_running:
         try:
             await client.start()
         except Exception as err:
-            _LOGGER.error(f"Impossible de démarrer le client EVSE: {err}")
+            _LOGGER.error(f"Unable to start EVSE client: {err}")
             raise CannotConnect
     
     try:
-        # Attendre plus longtemps pour découvrir les EVSEs (comme test_full.py)
+    # Wait longer to discover EVSEs (like test_full.py)
         import asyncio
         await asyncio.sleep(5)
         
-        # Vérifier si l'EVSE est trouvée - Retry en cas d'échec
+    # Check if EVSE is found - Retry on failure
         evse = client.get_evse(serial)
         if not evse:
-            # Retry après 2 secondes supplémentaires
-            _LOGGER.warning(f"EVSE {serial} non trouvée, nouvelle tentative...")
+            # Retry after 2 additional seconds
+            _LOGGER.warning(f"EVSE {serial} not found, retrying...")
             await asyncio.sleep(2)
             evse = client.get_evse(serial)
             
         if not evse:
-            _LOGGER.error(f"EVSE {serial} non trouvée après 7 secondes")
+            _LOGGER.error(f"EVSE {serial} not found after 7 seconds")
             raise CannotConnect
         
-        _LOGGER.info(f"EVSE {serial} trouvée, tentative de connexion...")
+        _LOGGER.info(f"EVSE {serial} found, attempting connection...")
         
-        # Tester la connexion avec retry
+    # Test connection with retry
         success = await client.login(serial, password)
         if not success:
-            # Un seul retry pour éviter de bloquer l'EVSE
-            _LOGGER.warning(f"Première tentative d'auth échouée pour {serial}, retry...")
+            # Only one retry to avoid blocking the EVSE
+            _LOGGER.warning(f"First auth attempt failed for {serial}, retrying...")
             await asyncio.sleep(2)
             success = await client.login(serial, password)
             
         if not success:
             raise InvalidAuth
         
-        _LOGGER.info(f"Connexion réussie à l'EVSE {serial}")
+        _LOGGER.info(f"Successfully connected to EVSE {serial}")
         
         return {
             "title": f"EVSE {serial}",
@@ -114,12 +114,12 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         }
         
     finally:
-        # Arrêter le client s'il n'était pas démarré avant
+    # Stop the client if it was not started before
         if not was_running:
             await client.stop()
 
 class CannotConnect(HomeAssistantError):
-    """Erreur pour indiquer qu'on ne peut pas se connecter"""
+    """Error indicating that connection could not be established"""
 
 class InvalidAuth(HomeAssistantError):
-    """Erreur pour indiquer une authentification invalide"""
+    """Error indicating invalid authentication"""

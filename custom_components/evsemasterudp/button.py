@@ -1,4 +1,4 @@
-"""Boutons pour contrôle de charge EVSE"""
+"""Buttons for EVSE charge control"""
 from __future__ import annotations
 
 from homeassistant.components.button import ButtonEntity
@@ -53,7 +53,7 @@ class EVSEBaseButton(CoordinatorEntity, ButtonEntity):
 class EVSEStartChargeButton(EVSEBaseButton):
     def __init__(self, coordinator, client, serial: str, base_name: str):
         super().__init__(coordinator, client, serial, base_name)
-        self._attr_name = f"{base_name} Démarrer Charge"
+        self._attr_name = f"{base_name} Start Charge"
         self._attr_unique_id = f"{serial}_start_charge"
         self._attr_icon = "mdi:play-circle"
 
@@ -63,7 +63,7 @@ class EVSEStartChargeButton(EVSEBaseButton):
 
     @property
     def available(self) -> bool:
-        # Hérite de base (online + logged_in) ET cooldown expiré
+    # Inherits base (online + logged_in) AND cooldown expired
         if not super().available:
             return False
         remaining = self.client.get_cooldown_remaining(self.serial)
@@ -78,7 +78,7 @@ class EVSEStartChargeButton(EVSEBaseButton):
 class EVSEStopChargeButton(EVSEBaseButton):
     def __init__(self, coordinator, client, serial: str, base_name: str):
         super().__init__(coordinator, client, serial, base_name)
-        self._attr_name = f"{base_name} Arrêter Charge"
+        self._attr_name = f"{base_name} Stop Charge"
         self._attr_unique_id = f"{serial}_stop_charge"
         self._attr_icon = "mdi:stop-circle"
 

@@ -1,5 +1,5 @@
 """
-Client EVSE pour Home Assistant
+EVSE client for Home Assistant
 """
 import asyncio
 import logging
@@ -11,7 +11,7 @@ from .protocol import Communicator, EVSE, get_communicator
 _LOGGER = logging.getLogger(__name__)
 
 class EVSEClient:
-    """Client pour communiquer avec les bornes EVSE via UDP"""
+    """Client for communicating with EVSE stations via UDP"""
     
     def __init__(self, port: int = 28376):
         self.port = port
@@ -19,12 +19,12 @@ class EVSEClient:
         self.running = False
         self.callbacks: Dict[str, Callable] = {}
         
-        # Protection contre les changements rapides
+    # Protection against rapid changes
         self._fast_change_protection: Dict[str, int] = {}  # serial -> minutes
         self._last_charge_change: Dict[str, datetime] = {}  # serial -> timestamp
         
     async def start(self):
-        """Démarrer le client UDP"""
+        """Start the UDP client"""
         if self.running:
             return
             
@@ -32,36 +32,36 @@ class EVSEClient:
             await self.communicator.start()
             self.running = True
             
-            # Ajouter notre callback pour les événements
+            # Add our callback for events
             self.communicator.add_callback('evse_client', self._handle_evse_event)
             
-            _LOGGER.info(f"Client EVSE démarré sur le port {self.port}")
+            _LOGGER.info(f"EVSE client started on port {self.port}")
             
         except Exception as e:
-            _LOGGER.error(f"Erreur lors du démarrage du client EVSE: {e}")
+            _LOGGER.error(f"Error while starting EVSE client: {e}")
             raise
     
     async def stop(self):
-        """Arrêter le client"""
+        """Stop the client"""
         self.running = False
         self.communicator.remove_callback('evse_client')
         await self.communicator.stop()
-        _LOGGER.info("Client EVSE arrêté")
+        _LOGGER.info("EVSE client stopped")
     
     async def _handle_evse_event(self, event: str, evse: EVSE):
-        """Gérer les événements EVSE"""
-        # Convertir l'EVSE en format compatible Home Assistant
+        """Handle EVSE events"""
+        # Convert EVSE to Home Assistant compatible format
         evse_data = self._evse_to_dict(evse)
         
-        # Notifier nos callbacks
+        # Notify our callbacks
         for callback in self.callbacks.values():
             try:
                 await callback(evse.info.serial, evse_data)
             except Exception as e:
-                _LOGGER.error(f"Erreur dans le callback: {e}")
+                _LOGGER.error(f"Error in callback: {e}")
     
     def _evse_to_dict(self, evse: EVSE) -> Dict[str, Any]:
-        """Convertir un objet EVSE en dictionnaire"""
+        """Convert an EVSE object to a dictionary"""
         data = {
             'serial': evse.info.serial,
             'ip': evse.info.ip,
@@ -71,7 +71,7 @@ class EVSEClient:
             'logged_in': evse.is_logged_in(),
             'state': evse.get_meta_state(),
             
-            # Informations de l'EVSE
+            # EVSE information
             'brand': evse.info.brand,
             'model': evse.info.model,
             'hardware_version': evse.info.hardware_version,
@@ -86,7 +86,7 @@ class EVSEClient:
             'temperature_unit': evse.config.temperature_unit,
         }
         
-        # État électrique
+    # Electrical state
         if evse.state:
             data.update({
                 'current_power': evse.state.current_power,
@@ -103,7 +103,7 @@ class EVSEClient:
                 'errors': evse.state.errors,
             })
         else:
-            # Valeurs par défaut si pas d'état
+            # Default values if no state
             data.update({
                 'current_power': 0,
                 'voltage_l1': 0,
@@ -119,7 +119,7 @@ class EVSEClient:
                 'errors': [],
             })
         
-        # Session de charge
+    # Charging session
         if evse.current_charge:
             data.update({
                 'charge_kwh': evse.current_charge.charge_kwh,
@@ -140,129 +140,128 @@ class EVSEClient:
         return data
     
     def add_callback(self, name: str, callback: Callable):
-        """Ajouter un callback pour les changements d'état"""
+        """Add a callback for state changes"""
         self.callbacks[name] = callback
     
     def remove_callback(self, name: str):
-        """Supprimer un callback"""
+        """Remove a callback"""
         self.callbacks.pop(name, None)
     
     def get_evse(self, serial: str) -> Optional[Dict[str, Any]]:
-        """Obtenir les données d'une EVSE"""
+        """Get the data for an EVSE"""
         evse = self.communicator.get_evse(serial)
         if evse:
             return self._evse_to_dict(evse)
         return None
     
     def get_all_evses(self) -> Dict[str, Dict[str, Any]]:
-        """Obtenir toutes les EVSEs"""
+        """Get all EVSEs"""
         result = {}
         for serial, evse in self.communicator.get_all_evses().items():
             result[serial] = self._evse_to_dict(evse)
         return result
     
     async def login(self, serial: str, password: str) -> bool:
-        """Se connecter à une EVSE"""
+        """Log in to an EVSE"""
         evse = self.communicator.get_evse(serial)
         if not evse:
-            _LOGGER.error(f"EVSE {serial} non trouvée")
+            _LOGGER.error(f"EVSE {serial} not found")
             return False
         
         return await evse.login(password)
     
     async def start_charging(self, serial: str, amps: int = None, single_phase: bool = False) -> bool:
-        """Démarrer la charge"""
+        """Start charging"""
         
-        # Vérifier la protection contre les démarrages rapides
+    # Check protection against rapid starts
         if not self._can_start_charge(serial):
             return False
         
         evse = self.communicator.get_evse(serial)
         if not evse:
-            _LOGGER.error(f"EVSE {serial} non trouvée")
+            _LOGGER.error(f"EVSE {serial} not found")
             return False
         
-        # Si aucun ampérage spécifié, utiliser une valeur sûre
+    # If no amperage specified, use a safe value
         if amps is None:
-            # Protection: Fallback à 16A au lieu de 32A si max_electricity pas encore lu
-            # Ceci évite d'utiliser des valeurs trop élevées lors du premier démarrage
+            # Protection: Fallback to 16A instead of 32A if max_electricity not yet read
+            # This avoids using values that are too high during the first start
             if evse.config and evse.config.max_electricity > 0:
-                # Utiliser la valeur configurée de l'EVSE
+                # Use the configured value from the EVSE
                 amps = evse.config.max_electricity
             else:
-                # Fallback de sécurité : 16A au lieu de 32A
+                # Safety fallback: 16A instead of 32A
                 max_amps = evse.info.max_electricity if evse.info.max_electricity > 0 else 32
                 amps = min(max_amps, 16)
         
-        # Le démarrage ne déclenche plus de cooldown (seuls les arrêts depuis un état CHARGING le font)
+    # Starting no longer triggers cooldown (only stops from CHARGING state do)
         return await evse.charge_start(amps, single_phase)
     
     async def stop_charging(self, serial: str) -> bool:
-        """Arrêter la charge"""
+        """Stop charging"""
         evse = self.communicator.get_evse(serial)
         if not evse:
-            _LOGGER.error(f"EVSE {serial} non trouvée")
+            _LOGGER.error(f"EVSE {serial} not found")
             return False
         
-        # Toujours autoriser l'arrêt (sécurité)
+    # Always allow stop (safety)
         was_charging = evse.get_meta_state() == "CHARGING"
         result = await evse.charge_stop()
-        # Enregistrer l'arrêt uniquement si on était réellement en charge
+    # Record the stop only if we were actually charging
         if result and was_charging:
             self._record_charge_state_change(serial)
             
         return result
     
     async def set_max_current(self, serial: str, amps: int) -> bool:
-        """Définir le courant maximum"""
+        """Set the maximum current"""
         evse = self.communicator.get_evse(serial)
         if not evse:
-            _LOGGER.error(f"EVSE {serial} non trouvée")
+            _LOGGER.error(f"EVSE {serial} not found")
             return False
         
         return await evse.set_max_electricity(amps)
     
     async def set_name(self, serial: str, name: str) -> bool:
-        """Définir le nom de l'EVSE"""
+        """Set the EVSE name"""
         evse = self.communicator.get_evse(serial)
         if not evse:
-            _LOGGER.error(f"EVSE {serial} non trouvée")
+            _LOGGER.error(f"EVSE {serial} not found")
             return False
         
         return await evse.set_name(name)
     
     async def sync_time(self, serial: str) -> bool:
-        """Synchroniser l'heure de l'EVSE"""
+        """Synchronize the EVSE time"""
         evse = self.communicator.get_evse(serial)
         if not evse:
-            _LOGGER.error(f"EVSE {serial} non trouvée")
+            _LOGGER.error(f"EVSE {serial} not found")
             return False
         
         return await evse.sync_time()
     
     async def set_fast_change_protection(self, serial: str, minutes: int) -> None:
-        """Définir la protection contre les changements rapides (en minutes)"""
+        """Set rapid change protection (in minutes)"""
         self._fast_change_protection[serial] = minutes
-        _LOGGER.info(f"Protection changements rapides pour {serial}: {minutes} minutes")
+        _LOGGER.info(f"Rapid change protection for {serial}: {minutes} minutes")
     
     def get_fast_change_protection(self, serial: str) -> int:
-        """Obtenir la protection actuelle (en minutes)
+        """Get the current protection (in minutes)
 
-        Défaut ajusté à 1 minute (au lieu de 5) pour permettre une réactivité
-        plus souple tout en évitant les cycles instantanés. L'utilisateur peut
-        toujours augmenter la valeur via l'entité numérique ou désactiver (0).
+        Default set to 1 minute (instead of 5) for more flexible responsiveness
+        while avoiding instant cycles. The user can always increase the value via the number entity or disable (0).
         """
-        return self._fast_change_protection.get(serial, 1)  # défaut 1 minute
+        return self._fast_change_protection.get(serial, 1)  # default 1 minute
     
     def _can_start_charge(self, serial: str) -> bool:
-        """Vérifier si on peut démarrer la charge (protection anti-usure)"""
+        """Check if charging can be started (anti-wear protection)"""
         protection_minutes = self.get_fast_change_protection(serial)
         
-        # Si protection désactivée (0), autoriser
+    # If protection is disabled (0), allow
         if protection_minutes == 0:
             return True
         
-        # Vérifier le délai depuis le dernier arrêt
+    # Check the delay since the last stop
         last_change = self._last_charge_change.get(serial)
         if last_change is None:
             return True
@@ -274,8 +273,8 @@ class EVSEClient:
             remaining = min_interval - time_since_last
             remaining_minutes = remaining.total_seconds() / 60
             _LOGGER.warning(
-                f"Protection démarrage active pour {serial}: "
-                f"attendre encore {remaining_minutes:.1f} minutes depuis le dernier arrêt "
+                f"Start protection active for {serial}: "
+                f"wait another {remaining_minutes:.1f} minutes since the last stop "
                 f"(protection: {protection_minutes} min)"
             )
             return False
@@ -283,15 +282,15 @@ class EVSEClient:
         return True
     
     def _record_charge_state_change(self, serial: str) -> None:
-        """Enregistrer un arrêt de charge (pour protéger le prochain démarrage)"""
+        """Record a charge stop (to protect the next start)"""
         self._last_charge_change[serial] = datetime.now()
-        _LOGGER.debug(f"Arrêt de charge enregistré pour {serial}")
+    _LOGGER.debug(f"Charge stop recorded for {serial}")
 
-    # --- Exposition utilitaire pour l'UI / capteurs ---
+    # --- Utility exposure for UI / sensors ---
     def get_cooldown_remaining(self, serial: str) -> timedelta:
-        """Retourner le temps restant avant qu'un nouveau démarrage soit autorisé.
+        """Return the remaining time before a new start is allowed.
 
-        Retourne 0 si aucune protection active ou si délai déjà écoulé.
+        Returns 0 if no protection is active or if the delay has already passed.
         """
         protection_minutes = self.get_fast_change_protection(serial)
         if protection_minutes == 0:
@@ -306,11 +305,11 @@ class EVSEClient:
             return timedelta(0)
         return remaining
 
-# Singleton pour partager l'instance entre les composants HA
+# Singleton to share the instance between HA components
 _client_instance: Optional[EVSEClient] = None
 
 def get_evse_client() -> EVSEClient:
-    """Obtenir l'instance singleton du client EVSE"""
+    """Get the singleton instance of the EVSE client"""
     global _client_instance
     if _client_instance is None:
         _client_instance = EVSEClient()
