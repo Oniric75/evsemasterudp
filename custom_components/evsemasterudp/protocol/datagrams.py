@@ -89,7 +89,7 @@ class SingleACStatus(Datagram):
     
     def __init__(self):
         super().__init__()
-    # Fields according to SingleACStatus.ts (exact order)
+        # Fields according to SingleACStatus.ts (exact order)
         self.line_id: int = 0
         self.l1_voltage: float = 0.0          # V * 0.1
         self.l1_electricity: float = 0.0      # A * 0.01  
@@ -98,15 +98,15 @@ class SingleACStatus(Datagram):
         self.inner_temp: float = 0.0          # °C (formule spéciale)
         self.outer_temp: float = 0.0          # °C (formule spéciale)
         self.emergency_btn_state: int = 0
-        self.gun_state = 0
-        self.output_state = 0
-        self.current_state = 0
-        self.errors = []           # Error bitfield
+        self.gun_state: int = 0
+        self.output_state: int = 0
+        self.current_state: int = 0
+        self.errors: list = []           # Error bitfield
         # Optional three-phase
-        self.l2_voltage = 0.0
-        self.l2_electricity = 0.0
-        self.l3_voltage = 0.0
-        self.l3_electricity = 0.0
+        self.l2_voltage: float = 0.0
+        self.l2_electricity: float = 0.0
+        self.l3_voltage: float = 0.0
+        self.l3_electricity: float = 0.0
     
     def pack_payload(self) -> bytes:
         return b''  # App does not send this message
@@ -421,33 +421,33 @@ class CurrentChargeRecord(Datagram):
     
     def __init__(self):
         super().__init__()
-        self.line_id = 1
-        self.start_user_id = ""
-        self.end_user_id = ""
-        self.charge_id = ""
-        self.has_reservation = 0
-        self.start_type = 0
-        self.charge_type = 0
-        self.charge_param1 = 0
-        self.charge_param2 = 0.0
-        self.charge_param3 = 0.0
-        self.stop_reason = 0
-        self.has_stop_charge = 0
-        self.reservation_data = 0
-        self.start_date = 0
-        self.stop_date = 0
-        self.charged_time = 0
-        self.charge_start_power = 0.0
-        self.charge_stop_power = 0.0
-        self.charge_power = 0.0
-        self.charge_price = 0.0
-        self.fee_type = 0
-        self.charge_fee = 0.0
-        self.log_kw_length = 0
-        self.log_kw = []
-        self.log_charge_data_kwh = []
-        self.log_charge_data_charge_fee = []
-        self.log_charge_data_service_fee = []
+        self.line_id: int = 1
+        self.start_user_id: str = ""
+        self.end_user_id: str = ""
+        self.charge_id: str = ""
+        self.has_reservation: int = 0
+        self.start_type: int = 0
+        self.charge_type: int = 0
+        self.charge_param1: int = 0
+        self.charge_param2: float = 0.0
+        self.charge_param3: float = 0.0
+        self.stop_reason: int = 0
+        self.has_stop_charge: int = 0
+        self.reservation_data: int = 0
+        self.start_date: int = 0
+        self.stop_date: int = 0
+        self.charged_time: int = 0
+        self.charge_start_power: float = 0.0
+        self.charge_stop_power: float = 0.0
+        self.charge_power: float = 0.0
+        self.charge_price: float = 0.0
+        self.fee_type: int = 0
+        self.charge_fee: float = 0.0
+        self.log_kw_length: int = 0
+        self.log_kw: list = []
+        self.log_charge_data_kwh: list = []
+        self.log_charge_data_charge_fee: list = []
+        self.log_charge_data_service_fee: list = []
     
     def pack_payload(self) -> bytes:
         return b''
@@ -539,9 +539,9 @@ class SingleACChargingStatusPublicAuto(Datagram):
         self.charge_id = ""
         self.start_type = 0
         self.charge_type = 0
-        self.max_duration_minutes = None
-        self.max_energy_kwh = None
-        self.charge_param3 = None
+        self.max_duration_minutes = None  # type: Optional[int]
+        self.max_energy_kwh = None  # type: Optional[float]
+        self.charge_param3 = None  # type: Optional[float]
         self.reservation_date = 0  # timestamp
         self.user_id = ""
         self.max_electricity = 0
