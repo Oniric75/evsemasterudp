@@ -284,7 +284,7 @@ class EVSEClient:
     def _record_charge_state_change(self, serial: str) -> None:
         """Record a charge stop (to protect the next start)"""
         self._last_charge_change[serial] = datetime.now()
-    _LOGGER.debug(f"Charge stop recorded for {serial}")
+        _LOGGER.debug(f"Charge stop recorded for {serial}")
 
     # --- Utility exposure for UI / sensors ---
     def get_cooldown_remaining(self, serial: str) -> timedelta:
