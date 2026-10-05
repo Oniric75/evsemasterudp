@@ -84,6 +84,7 @@ class EVSEClient:
             'name': evse.config.name or 'EVSEMaster',
             'configured_max_electricity': evse.config.max_electricity,
             'temperature_unit': evse.config.temperature_unit,
+            'screen_brightness': evse.config.screen_brightness,  
         }
         
     # Electrical state
@@ -221,6 +222,15 @@ class EVSEClient:
             return False
         
         return await evse.set_max_electricity(amps)
+    
+    async def set_brightness(self, serial: str, brightness: int) -> bool:
+        """Set the screen brightness (0-100)"""
+        evse = self.communicator.get_evse(serial)
+        if not evse:
+            _LOGGER.error(f"EVSE {serial} not found")
+            return False
+        
+        return await evse.set_brightness(brightness)
     
     async def set_name(self, serial: str, name: str) -> bool:
         """Set the EVSE name"""

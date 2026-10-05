@@ -736,3 +736,48 @@ class SetAndGetOffLineChargeResponse(Datagram):
     def unpack_payload(self, buffer: bytes) -> None:
         if len(buffer) >= 1:
             self.offline_enabled = struct.unpack('B', buffer[0:1])[0] == 1
+
+@register_datagram
+class SetAndGetScreenBrightness(Datagram):
+    """0x8162 (33122) - Set/Get screen brightness (App → EVSE)"""
+    COMMAND = 0x8162
+    
+    def __init__(self):
+        super().__init__()
+        self.brightness: int = 50  # 0-100 percent
+    
+    def pack_payload(self) -> bytes:
+        # Payload: [0x00, 0x02, brightness, 0x00, 0x00, 0x00, 0x00, 0x00]
+        buffer = bytearray(8)
+        buffer[0] = 0x00
+        buffer[1] = 0x02
+        buffer[2] = self.brightness
+        # Rest filled with zeros (default)
+        return bytes(buffer)
+    
+    def unpack_payload(self, buffer: bytes) -> None:
+        if len(buffer) >= 3:
+            self.brightness = buffer[2]
+    
+    def set_brightness(self, value: int):
+        """Set brightness value (0-100)"""
+        if not (0 <= value <= 100):
+            raise ValueError("Brightness must be 0-100")
+        self.brightness = value
+        return self
+
+@register_datagram
+class SetAndGetScreenBrightnessResponse(Datagram):
+    """0x0162 (354) - Screen brightness response (EVSE → App)"""
+    COMMAND = 0x0162
+    
+    def __init__(self):
+        super().__init__()
+        self.brightness: int = 50  # 0-100 percent -- default value
+    
+    def pack_payload(self) -> bytes:
+        return b''  # App does not generate this message
+    
+    def unpack_payload(self, buffer: bytes) -> None:
+        if len(buffer) >= 3:
+            self.brightness = buffer[2]    

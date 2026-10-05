@@ -27,6 +27,7 @@ async def async_setup_entry(
     entities = [
         EVSECurrentControl(coordinator, client, serial, base_name),
         EVSEFastChangeProtection(coordinator, client, serial, base_name),
+        EVSEScreenBrightness(coordinator, client, serial, base_name),
     ]
     
     async_add_entities(entities)
@@ -121,3 +122,56 @@ class EVSEFastChangeProtection(CoordinatorEntity, NumberEntity):
         # Stocker dans le client pour utilisation par la logique de protection
         await self.client.set_fast_change_protection(self.serial, self._protection_minutes)
         # Pas besoin de refresh car c'est un paramètre local
+
+
+class EVSEScreenBrightness(CoordinatorEntity, NumberEntity):
+    """Control for screen backlight brightness"""
+    
+    def __init__(self, coordinator, client, serial: str, base_name: str):
+        super().__init__(coordinator)
+        self.client = client
+        self.serial = serial
+        self._attr_name = f"{base_name} Screen Brightness"
+        self._attr_unique_id = f"{serial}_screen_brightness"
+        self._attr_icon = "mdi:brightness-6"
+        self._attr_native_unit_of_measurement = "%"
+        self._attr_native_min_value = 0
+        self._attr_native_max_value = 100
+        self._attr_native_step = 1
+        
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, serial)},
+            "name": base_name,
+            "manufacturer": "Oniric75",
+            "model": "EVSE Master UDP",
+        }
+    
+    @property
+    def evse_data(self):
+        """Get EVSE data"""
+        return self.coordinator.data.get(self.serial, {})
+    
+    @property
+    def native_value(self) -> float | None:
+        """Return the current brightness value"""
+        data = self.evse_data
+        # Default to 50% if not available
+        return data.get("screen_brightness", 50)
+    
+    @property
+    def available(self) -> bool:
+        """Return whether the control is available"""
+        data = self.evse_data
+        return data.get("online", False) and data.get("logged_in", False)
+    
+    @property
+    def native_value(self) -> float | None:
+        """Return the current brightness value"""
+        data = self.evse_data
+        return data.get("screen_brightness", 50)
+        
+    async def async_set_native_value(self, value: float) -> None:
+        """Set the brightness"""
+        success = await self.client.set_brightness(self.serial, int(value))
+        if success:
+            await self.coordinator.async_request_refresh()

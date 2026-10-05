@@ -17,6 +17,15 @@ from .datagrams import (
     Login, LoginResponse, SingleACChargingStatusPublicAuto, SingleACChargingStatusResponse
 )
 
+from .datagrams import (
+    RequestLogin, LoginConfirm, PasswordErrorResponse, 
+    Heading, HeadingResponse, SingleACStatus, SingleACStatusResponse,
+    CurrentChargeRecord, RequestChargeStatusRecord, ChargeStart, ChargeStop,
+    SetAndGetOutputElectricity, SetAndGetOutputElectricityResponse,
+    Login, LoginResponse, SingleACChargingStatusPublicAuto, SingleACChargingStatusResponse,
+    SetAndGetScreenBrightness, SetAndGetScreenBrightnessResponse  
+)
+
 _LOGGER = logging.getLogger(__name__)
 
 class EVSEInfo:
@@ -46,6 +55,7 @@ class EVSEConfig:
         self.offline_charge = 0
         self.max_electricity = 6
         self.temperature_unit = 1
+        self.screen_brightness = 50 
 
 class EVSEState:
     """Electrical state of an EVSE"""
@@ -332,7 +342,28 @@ class EVSE:
         except Exception as e:
             _LOGGER.error(f"Error while setting current for {self.info.serial}: {e}")
             return False
-    
+    async def set_brightness(self, brightness: int) -> bool:
+        """Set the screen brightness (0-100)"""
+        if not self.is_logged_in():
+            _LOGGER.error(f"EVSE {self.info.serial} not connected")
+            return False
+        
+        try:
+            _LOGGER.info(f"Setting brightness to {brightness}% for {self.info.serial}")
+            
+            set_brightness = SetAndGetScreenBrightness()
+            set_brightness.set_device_serial(self.info.serial)
+            set_brightness.set_device_password(self.password)
+            set_brightness.set_brightness(brightness)
+            
+            await self.send_datagram(set_brightness)
+            _LOGGER.debug(f"SetAndGetScreenBrightness sent to {self.info.serial}")
+            
+            return True
+            
+        except Exception as e:
+            _LOGGER.error(f"Error while setting brightness for {self.info.serial}: {e}")
+            return False
     async def set_name(self, name: str) -> bool:
         """Set the EVSE name"""
         if not self.is_logged_in():
@@ -502,6 +533,8 @@ class Communicator:
             await self._handle_heading(evse, datagram)
         elif isinstance(datagram, SetAndGetOutputElectricityResponse):
             await self._handle_output_electricity_response(evse, datagram)
+        elif isinstance(datagram, SetAndGetScreenBrightnessResponse):
+            await self._handle_screen_brightness_response(evse, datagram)
         elif isinstance(datagram, PasswordErrorResponse):
             # PasswordErrorResponses are handled in the login() method via _wait_for_response
             # Ignore those arriving here to avoid misleading error logs
@@ -645,6 +678,13 @@ class Communicator:
             evse.config.max_electricity = datagram.electricity
             await self._notify_callbacks('evse_changed', evse)
     
+    async def _handle_screen_brightness_response(self, evse: EVSE, datagram: SetAndGetScreenBrightnessResponse):
+        """Handle a screen brightness response"""
+        _LOGGER.debug(f"Screen brightness response received from {evse.info.serial}: {datagram.brightness}%")
+        # Update local configuration
+        evse.config.screen_brightness = datagram.brightness
+        await self._notify_callbacks('evse_changed', evse)
+
     async def send(self, datagram: Datagram, evse: EVSE) -> int:
         """Send a datagram"""
         if not self.running:
