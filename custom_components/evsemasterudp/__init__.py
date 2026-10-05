@@ -58,6 +58,9 @@ class EVSEDataUpdateCoordinator(DataUpdateCoordinator):
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up the EVSE integration from a config entry"""
     
+    # Check if this entry has been set up before using options
+    is_first_setup = not entry.options.get("setup_complete", False)
+
     # Retrieve configuration parameters
     serial = entry.data.get("serial")
     password = entry.data.get("password")
@@ -115,13 +118,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Notification recommending a restart after installation/update
-    create(
-        hass,
-        f"EVSE Master UDP successfully configured for EVSE {serial}.\n\n"
-        "It is recommended to restart Home Assistant for optimal operation.",
-        title="EVSE Master UDP - Installation successful",
-        notification_id=f"evsemasterudp_setup_{serial}"
-    )
+    if is_first_setup:
+        # Mark this entry as configured by updating options
+        hass.config_entries.async_update_entry(
+            entry,
+            options={**entry.options, "setup_complete": True}
+        )
+        
+        create(
+            hass,
+            f"EVSE Master UDP successfully configured for EVSE {serial}.\n\n"
+            "It is recommended to restart Home Assistant for optimal operation.",
+            title="EVSE Master UDP - Installation successful",
+            notification_id=f"evsemasterudp_setup_{serial}"
+        )
 
     return True
 
